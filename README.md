@@ -2,24 +2,24 @@
 
 ## Support
 
-| Expo | :heavy_check_mark:
-| React Native CLI | :heavy_check_mark:
+| Expo | ✅  
+| React Native CLI | ✅
 
-| Implement | Android            | IOS                |
-| --------- | ------------------ | ------------------ |
-| Base64    | :heavy_check_mark: | :heavy_check_mark: |
+| Implement | Android | IOS |
+| --------- | ------- | --- |
+| Base64    | ✅      | ✅  |
 
 ## Support
 
-| Printer    | Android            | IOS                |
-| ---------- | ------------------ | ------------------ |
-| BLEPrinter | :heavy_check_mark: | coming soon        |
-| NetPrinter | :heavy_check_mark: | :heavy_check_mark: |
+| Printer    | Android | IOS         |
+| ---------- | ------- | ----------- |
+| BLEPrinter |         | coming soon |
+| NetPrinter | ✅      | ✅          |
 
 <br />
 <div style="display: flex; flex-direction: row; align-self: center; align-items: center">
-<img src="image/img1.jpeg" alt="bill" width="270" height="580"/>
-<img src="image/img2.jpeg" alt="screenshot" width="270" height="580"/>
+<img src="https://i.ibb.co/30j9w2H/img1.jpg" alt="bill" width="370" height="580"/>
+<img src="https://i.ibb.co/5Kr2JD4/img2.jpg" alt="screenshot" width="370" height="580"/>
 </div>
 
 ## Installation
@@ -173,11 +173,19 @@ const printLoop = () => {
 };
 ```
 
-## Support Me by give Star
+## Support Me by give Star ⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
 
 <img alt="Star the SavanitDev repo on GitHub to support the project" src="https://user-images.githubusercontent.com/9664363/185428788-d762fd5d-97b3-4f59-8db7-f72405be9677.gif" width="50%">
 
-## FAQ Support
+## FAQ Support 🔰🔰🔰
 
-you can contact me directly [Telegram](@dev_la), feedback your problem  
-<img src="image/dev_la.jpeg">
+you can contact me directly [Telegram](@dev_la), feedback your problem
+
+<img src="https://i.ibb.co/vc8HjFW/dev-la.jpg">
+
+or ✉️
+
+Telegram : @dev_la
+Fanpage : https://www.facebook.com/SavanitDev
+
+Thank you guys

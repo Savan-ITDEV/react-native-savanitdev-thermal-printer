@@ -5,5 +5,12 @@
   "main": "src/index",
   "author": " <> ()",
   "license": "SavanitDev",
-  "homepage": "#readme"
+  "homepage": "https://github.com/Savan-ITDEV/react-native-savanitdev-thermal-printer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Savan-ITDEV/react-native-savanitdev-thermal-printer"
+  },
+  "bugs": {
+    "url": "https://github.com/Savan-ITDEV/react-native-savanitdev-thermal-printer"
+  }
 }
