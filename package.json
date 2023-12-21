@@ -1,9 +1,9 @@
 {
   "name": "react-native-savanitdev-thermal-printer",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "test",
   "main": "src/index",
   "author": " <> ()",
-  "license": "UNLICENSED",
+  "license": "SavanitDev",
   "homepage": "#readme"
 }

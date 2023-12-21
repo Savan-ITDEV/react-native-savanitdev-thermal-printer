@@ -38,11 +38,7 @@ export function connectNet(ip: string): Promise<boolean> {
     return SavanitdevThermalPrinter.connectNet(ip);
   }
 }
-export function printImg(
-  img: string,
-  w1: number,
-  w2: number
-): Promise<boolean> {
+export function printImg(img: string, w1: number, w2: number): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.printImg(img, w1, w2);
   }
