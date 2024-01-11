@@ -13,7 +13,7 @@
 
 | Printer    | Android | IOS         |
 | ---------- | ------- | ----------- |
-| BLEPrinter |         | coming soon |
+| BLEPrinter | ✅      | coming soon |
 | NetPrinter | ✅      | ✅          |
 
 <br />
@@ -149,15 +149,7 @@ const printLoop = () => {
           setTimeout(() => {
             printImgBase64(base64, 576, 576)
               .finally(() => {
-                setTimeout(resolve, 500);
-              })
-              .catch((e) => {
-                console.log("error print =>", e);
-              });
-          }, 500);
-          setTimeout(() => {
-            printRawData(base64string)
-              .finally(() => {
+                disConnect(res.ip_address);
                 setTimeout(resolve, 500);
               })
               .catch((e) => {

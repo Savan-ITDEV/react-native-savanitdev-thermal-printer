@@ -117,6 +117,17 @@ export function printBitmap(
     return SavanitdevThermalPrinter.printBitmap(img, w1, w2);
   }
 }
+
+export function printBitmapBLE(
+  img: string,
+  w1: number,
+  w2: number,
+  isBLE: number
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.printBitmapBLE(img, w1, w2, isBLE);
+  }
+}
 export function disConnect(ip: string): Promise<boolean> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.disConnectNet();

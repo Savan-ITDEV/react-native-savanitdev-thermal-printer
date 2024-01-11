@@ -87,6 +87,52 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }
     };
 
+@ReactMethod
+    private void printBitmapBLE(String base64String,int w1,int w2,int isBLE ,Promise promise){
+        final Bitmap bitmap1 =  BitmapProcess.compressBmpByYourWidth
+                (decodeBase64ToBitmap(base64String),w1);
+
+        if (ISCONNECT){
+           myBinder.WriteSendData(new TaskCallback() {
+                @Override
+                public void OnSucceed() {
+                     promise.resolve("1");
+                      disConnectNet();
+ 
+                }
+
+                @Override
+                public void OnFailed() {
+                   promise.reject("","OnFailed print img");
+                   
+                  disConnectNet();
+                   
+                }
+            }, new ProcessData() {
+                @Override
+                public List<byte[]> processDataBeforeSend() {
+                    List<byte[]> list = new ArrayList<>();
+                    list.add(DataForSendToPrinterPos80.initializePrinter());
+                    List<Bitmap> blist= new ArrayList<>();
+                    blist = BitmapProcess.cutBitmap(50,bitmap1);
+                    for (int i= 0 ;i<blist.size();i++){
+                        list.add(DataForSendToPrinterPos80.printRasterBmp(0,blist.get(i), BitmapToByteData.BmpType.Threshold, BitmapToByteData.AlignType.Center,w2));
+                    }
+                    list.add(DataForSendToPrinterPos80.printAndFeedLine());
+
+                    if(isBLE == 0){
+                       list.add(DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(0x42,0x66));
+                    }
+                  
+                    return list;
+                }
+            });
+        }else {
+           promise.reject("","OnFailed print img");
+                      disConnectNet();
+                    
+        }
+    }
     @ReactMethod
     private void connectBT(String macAddress,Promise promise){
         if (macAddress.equals(null)||macAddress.equals("")){
