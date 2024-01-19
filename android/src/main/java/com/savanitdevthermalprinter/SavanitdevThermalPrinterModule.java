@@ -75,7 +75,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             myBinder= (IMyBinder) service;
             Log.e("myBinder","connect");
             // Toast toast = Toast.makeText(context, "connect", Toast.LENGTH_SHORT);
-            toast.show();
+            // toast.show();
            
         }
 
