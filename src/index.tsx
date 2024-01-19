@@ -128,12 +128,12 @@ export function printBitmapBLE(
     return SavanitdevThermalPrinter.printBitmapBLE(img, w1, w2, isBLE);
   }
 }
-export function disConnect(ip: string): Promise<boolean> {
+export async function disConnect(ip: string): Promise<string> {
   if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.disConnectNet();
+    return await SavanitdevThermalPrinter.disConnectNet();
   } else {
     // IP just required for IOS
-    return SavanitdevThermalPrinter.disconnectNet(ip);
+    return await SavanitdevThermalPrinter.disconnectNet(ip);
   }
 }
 export function findAvailableDevice() {
