@@ -70,9 +70,9 @@ export const handleAndroidPermissions = () => {
         PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
       ]).then((result: any) => {
         if (result) {
-          console.debug(
-            "[handleAndroidPermissions] User accepts runtime permissions android 12+"
-          );
+          // console.debug(
+          //   "[handleAndroidPermissions] User accepts runtime permissions android 12+"
+          // );
         } else {
           console.error(
             "[handleAndroidPermissions] User refuses runtime permissions android 12+"
@@ -84,17 +84,17 @@ export const handleAndroidPermissions = () => {
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
       ).then((checkResult: any) => {
         if (checkResult) {
-          console.debug(
-            "[handleAndroidPermissions] runtime permission Android <12 already OK"
-          );
+          // console.debug(
+          //   "[handleAndroidPermissions] runtime permission Android <12 already OK"
+          // );
         } else {
           PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
           ).then((requestResult: any) => {
             if (requestResult) {
-              console.debug(
-                "[handleAndroidPermissions] User accepts runtime permission android <12"
-              );
+              // console.debug(
+              //   "[handleAndroidPermissions] User accepts runtime permission android <12"
+              // );
             } else {
               console.error(
                 "[handleAndroidPermissions] User refuses runtime permission android <12"
