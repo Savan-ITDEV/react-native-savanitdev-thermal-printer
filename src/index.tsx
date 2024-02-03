@@ -195,6 +195,12 @@ export function connectBT(macAddress: string): Promise<string> {
     return SavanitdevThermalPrinter.connectBT(macAddress);
   }
 }
+export function clearLoops(ip: string): Promise<boolean> {
+  if (Platform.OS === "android") {
+  } else {
+    return SavanitdevThermalPrinter.clearLoops();
+  }
+}
 
 export const printPOS = {
   printText: function () {

@@ -131,7 +131,10 @@ class SavanitdevThermalPrinter: NSObject {
                   rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
     do{
       if(self.objectArray.contains(ip)){
-        resolve("conenct printer");
+        // resolve("conenct printer");
+        if(self.objectArray.count > 0 ){
+          self.connectIP(ip,resolver: resolve,rejecter: reject)
+        }
       }else{
         self.objectArray.append(ip);
         if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
