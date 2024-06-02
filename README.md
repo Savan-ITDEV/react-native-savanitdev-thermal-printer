@@ -70,12 +70,12 @@ module.exports = function androiManifestPlugin(config) {
 **`Print Columns Text`**
 
 ```
-npm i esc-pos-encoder
+npm i esc-pos-encoder-savanitdev
 
 ```
 
 ```tsx
-import EscPosEncoder from "esc-pos-encoder";
+import EscPosEncoder from "esc-pos-encoder-savanitdev";
 import { Buffer } from "buffer";
 
 useEffect(() => {

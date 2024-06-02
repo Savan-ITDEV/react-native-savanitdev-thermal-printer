@@ -1,9 +1,11 @@
 import {
-  NativeModules,
-  Platform,
-  PermissionsAndroid,
   Alert,
+  NativeModules,
+  PermissionsAndroid,
+  Platform,
 } from "react-native";
+
+import { Buffer } from "buffer";
 
 const LINKING_ERROR =
   `The package 'react-native-savanitdev-thermal-printer' doesn't seem to be linked. Make sure: \n\n` +
@@ -38,9 +40,29 @@ export function connectNet(ip: string): Promise<boolean> {
     return SavanitdevThermalPrinter.connectNet(ip);
   }
 }
-export function printImg(img: string, w1: number, w2: number): Promise<string> {
+
+export function getUSB(): Promise<String> {
   if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.printImg(img, w1, w2);
+    return SavanitdevThermalPrinter.getUSB();
+  } else {
+    return SavanitdevThermalPrinter.getUSB();
+  }
+}
+export function connectUSB(usbAddress: string): Promise<boolean> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.connectUSB(usbAddress);
+  } else {
+    return SavanitdevThermalPrinter.connectUSB(usbAddress);
+  }
+}
+export function printImg(
+  img: string,
+  w1: number,
+  w2: number,
+  isCut: number
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.printImg(img, w1, w2, isCut);
   }
 }
 
@@ -53,12 +75,13 @@ export async function printImgNet(
   ip: string,
   img: string,
   w1: number,
-  w2: number
-) {
+  w2: number,
+  isDisconnect = true
+): Promise<string> {
   if (Platform.OS === "android") {
     return await SavanitdevThermalPrinter.connectNetImg(ip, img, w1, w2);
   } else {
-    return await SavanitdevThermalPrinter.printImgNet(ip, img);
+    return SavanitdevThermalPrinter.printImgNet(ip, img, isDisconnect);
   }
 }
 
@@ -118,16 +141,6 @@ export function printBitmap(
   }
 }
 
-export function printBitmapBLE(
-  img: string,
-  w1: number,
-  w2: number,
-  isBLE: number
-): Promise<string> {
-  if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.printBitmapBLE(img, w1, w2, isBLE);
-  }
-}
 export async function disConnect(ip: string): Promise<string> {
   if (Platform.OS === "android") {
     return await SavanitdevThermalPrinter.disConnectNet();
@@ -147,12 +160,12 @@ export function findAvailableDevice() {
         }) => {
           for (const deviceName in bluetoothDevices) {
             if (bluetoothDevices.hasOwnProperty(deviceName)) {
-              const deviceAddress = bluetoothDevices[deviceName];
-              arr.push({ name: deviceName, deviceAddress: deviceAddress });
-              // console.log(
-              //   `Device Name: ${deviceName}, Device Address: ${deviceAddress}`
-              // );
-              // Do something with the deviceName and deviceAddress
+              const deviceAddress: string = bluetoothDevices[deviceName];
+              const body = {
+                name: deviceAddress.split(",")[0],
+                deviceAddress: deviceAddress.split(",")[1],
+              };
+              arr.push(body);
             }
           }
           // console.log("Lists device found : ", arr);
@@ -172,6 +185,7 @@ export function findAvailableDevice() {
             "Warning!",
             "please allow permission bluetooth for your app!"
           );
+          handleAndroidPermissions();
           return [];
         }
       });
@@ -182,19 +196,19 @@ export function printText(): Promise<string> {
     return SavanitdevThermalPrinter.printText();
   }
 }
-export function printRawData(encode: string, ip: string): Promise<string> {
+export function printRawData(
+  encode: string,
+  ip: string,
+  isDisconnect = true
+): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.printRawData(encode);
   } else {
     // IP must required for IOS
-    return SavanitdevThermalPrinter.printEncodeNet(ip, encode);
+    return SavanitdevThermalPrinter.printEncodeNet(ip, encode, isDisconnect);
   }
 }
-export function connectBT(macAddress: string): Promise<string> {
-  if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.connectBT(macAddress);
-  }
-}
+
 export function clearLoops(ip: string): Promise<boolean> {
   if (Platform.OS === "android") {
   } else {
@@ -202,9 +216,159 @@ export function clearLoops(ip: string): Promise<boolean> {
   }
 }
 
+// BLEUTOOTH //
+
+export function connectBT(macAddress: string): Promise<string> {
+  try {
+    if (Platform.OS === "android") {
+      return SavanitdevThermalPrinter.connectBT(macAddress);
+    } else {
+      return SavanitdevThermalPrinter.connectBLE(macAddress);
+    }
+  } catch (error) {
+    return "";
+  }
+}
+export function checkStatusBLE(): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.checkStatusBLE();
+  } else {
+    return SavanitdevThermalPrinter.checkStatusBLE("");
+  }
+}
+export function disconnectBLE(): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.disConnectBT();
+  } else {
+    return SavanitdevThermalPrinter.disconnectBLE("");
+  }
+}
+
+export function printLangPrinter(): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.printLangPrinter();
+  } else {
+    return SavanitdevThermalPrinter.printLangPrinter();
+  }
+}
+export function setLang(codepage = "70"): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.setLang(codepage);
+  } else {
+    return SavanitdevThermalPrinter.setLang(codepage);
+  }
+}
+export function getLangModel(): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.getLangModel();
+  } else {
+    return SavanitdevThermalPrinter.getLangModel();
+  }
+}
+export function cancelChinese(): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.cancelChinese();
+  } else {
+    return SavanitdevThermalPrinter.cancelChinese();
+  }
+}
+export function initialBLE(): Promise<string> {
+  if (Platform.OS === "android") {
+    handleAndroidPermissions();
+    return SavanitdevThermalPrinter.onCreate();
+  } else {
+    return SavanitdevThermalPrinter.initBLE();
+  }
+}
+export function requestUSBPermission(): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.tryGetUsbPermission();
+  } else {
+  }
+}
+
+export function getByteArrayList(): Promise<Object> {
+  return SavanitdevThermalPrinter.getByteArrayList()
+    .then((base64Strings: []) => {
+      const byteArrayList = base64Strings.map(
+        (base64) => Buffer.from(base64, "base64").toJSON().data
+      );
+      const combined = byteArrayList.flat();
+      return combined;
+    })
+    .catch((error) => {
+      console.error("error", error);
+    });
+}
+export async function getListDevice(): Promise<any[]> {
+  if (Platform.OS === "android") {
+  } else {
+    return await SavanitdevThermalPrinter.getListDevice("");
+  }
+}
+
+export async function startScanBLE(): Promise<any[]> {
+  if (Platform.OS === "android") {
+    return findAvailableDevice();
+  } else {
+    try {
+      const arr = [];
+      SavanitdevThermalPrinter.startScanBLE();
+      return new Promise<any[]>(async (resolve, reject) => {
+        getListDevice()
+          .then((data) => {
+            const body = data.map((i, k) => ({
+              name: `${i.name}-${k}`,
+              deviceAddress: i.identifier,
+            }));
+            console.log("====================================");
+            console.log(body);
+            console.log("====================================");
+            resolve(body);
+          })
+          .catch((err) => {
+            reject([]);
+          });
+      });
+    } catch (error) {
+      return [];
+    }
+  }
+}
+export function rawDataBLE(base64String: string): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.printRawData(base64String);
+  } else {
+    return SavanitdevThermalPrinter.rawDataBLE(base64String);
+  }
+}
+export function image64BaseBLE(
+  base64String: string,
+  w1: number,
+  w2: number,
+  isCut: number
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.printBitmapBLE(base64String, w1, w2, isCut);
+  } else {
+    return SavanitdevThermalPrinter.image64BaseBLE(base64String);
+  }
+}
+// BLEUTOOTH //
+
 export const printPOS = {
-  printText: function () {
+  printText: async function (): Promise<string> {
     return SavanitdevThermalPrinter.printText();
+  },
+  printTemplate: async function (
+    ip: string,
+    isDisconnect = true
+  ): Promise<string> {
+    if (Platform.OS === "ios") {
+      return SavanitdevThermalPrinter.printTemplate(ip, isDisconnect);
+    } else {
+      printPOS.printText();
+    }
   },
   initializeText: function () {
     return SavanitdevThermalPrinter.initializeText();
@@ -237,11 +401,23 @@ export const printPOS = {
     return SavanitdevThermalPrinter.selectAlignment(num);
   },
 
-  text: function (text: string, charset: string) {
+  text: function (text: string, charset = "cp874") {
     return SavanitdevThermalPrinter.text(text, charset);
+  },
+  setImg: function (base64String: string, w1: number) {
+    return SavanitdevThermalPrinter.setImg(base64String, w1);
   },
   selectCharacterSize: function (size: number) {
     return SavanitdevThermalPrinter.selectCharacterSize(size);
+  },
+  line: function (size: number) {
+    return SavanitdevThermalPrinter.line(size);
+  },
+  line2: function (size: number) {
+    return SavanitdevThermalPrinter.line2(size);
+  },
+  line3: function (size: number) {
+    return SavanitdevThermalPrinter.line3(size);
   },
   selectOrCancelBoldModel: function (size: number) {
     return SavanitdevThermalPrinter.selectOrCancelBoldModel(size);
@@ -254,5 +430,8 @@ export const printPOS = {
   },
   setAbsolutePrintPosition: function (n: number, m: number) {
     return SavanitdevThermalPrinter.setAbsolutePrintPosition(n, m);
+  },
+  setEncode: function (encode: string) {
+    return SavanitdevThermalPrinter.getEncode(encode);
   },
 };

@@ -217,6 +217,7 @@ static PrinterManager *shareManager = nil;
             if((_printerStatus==Normal||_printerStatus==PrintCompleted)&&_isConnected){
                 NSMutableData* dataM=[[NSMutableData alloc] initWithData:data];
                 [_wifiPrinter writeData:dataM withTimeout:-1 tag:0];
+                _printSucceed=true;
             }else{
                 _printSucceed=false;
                 NSLog(@"Printer status %@\n",[self statusToString:_printerStatus]);
