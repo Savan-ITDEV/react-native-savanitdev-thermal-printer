@@ -187,9 +187,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     @ReactMethod
     private void cancelChinese(){
           bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            if (!bluetoothAdapter.isEnabled()) {
-                promise.reject("turnoff");
-              
+            if (!bluetoothAdapter.isEnabled()) { 
             }else {
         if (ISCONNECT){
         // cancel -> 8 : use -> 0
