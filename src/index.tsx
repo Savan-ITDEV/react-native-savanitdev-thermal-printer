@@ -152,43 +152,25 @@ export async function disConnect(ip: string): Promise<string> {
 export function findAvailableDevice() {
   if (Platform.OS === "android") {
     const arr = [];
-    return SavanitdevThermalPrinter.findAvailableDevice()
-      .then(
-        (bluetoothDevices: {
-          [x: string]: any;
-          hasOwnProperty: (arg0: string) => any;
-        }) => {
-          for (const deviceName in bluetoothDevices) {
-            if (bluetoothDevices.hasOwnProperty(deviceName)) {
-              const deviceAddress: string = bluetoothDevices[deviceName];
-              const body = {
-                name: deviceAddress.split(",")[0],
-                deviceAddress: deviceAddress.split(",")[1],
-              };
-              arr.push(body);
-            }
+    return SavanitdevThermalPrinter.findAvailableDevice().then(
+      (bluetoothDevices: {
+        [x: string]: any;
+        hasOwnProperty: (arg0: string) => any;
+      }) => {
+        for (const deviceName in bluetoothDevices) {
+          if (bluetoothDevices.hasOwnProperty(deviceName)) {
+            const deviceAddress: string = bluetoothDevices[deviceName];
+            const body = {
+              name: deviceAddress.split(",")[0],
+              deviceAddress: deviceAddress.split(",")[1],
+            };
+            arr.push(body);
           }
-          // console.log("Lists device found : ", arr);
-          return arr;
         }
-      )
-      .catch(async (e: any) => {
-        const result = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN
-        );
-        console.error("error => ", e);
-
-        if (result) {
-          return [];
-        } else {
-          Alert.alert(
-            "Warning!",
-            "please allow permission bluetooth for your app!"
-          );
-          handleAndroidPermissions();
-          return [];
-        }
-      });
+        // console.log("Lists device found : ", arr);
+        return arr;
+      }
+    );
   }
 }
 export function printText(): Promise<string> {
