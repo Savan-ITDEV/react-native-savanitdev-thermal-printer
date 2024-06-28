@@ -116,6 +116,11 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     private void printBitmapBLE2(String base64String,int w1,int w2,int isBLE ,Promise promise){
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         final Bitmap bitmap1 =  BitmapProcess.compressBmpByYourWidth
                 (decodeBase64ToBitmap(base64String),w1);
 
@@ -146,38 +151,59 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
            disConnectBT(promise);
                     
         }
+            }
     }
 
     @ReactMethod
     private void printLangPrinter(Promise promise){
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         if (ISCONNECT){
         sendDataToPrinter(new byte[]{27, 64, 28, 46, 27, 33, 0, -123, -122, -121, -120, -119, -118, -117, -116, -115, -114, -113, -112, -111, -110, -109, -108, -107, -106, -105, -104, -103, -102, -101, -100, -99, -98, -97, -96, -95, -94, -93, -92, -91, -90, -89, -88, -87, -86, -85, -84, -83, -82, -81, -80,-79, -78, -77, -76, -75, -74, -73, -72, -71, -70,-69,-68, -67, -66, -65, -64, -63, -62, -61, -60, -59, -58, -57, -56, -55, -54, -53, -52, -51, -50, -49, -48, -47, -46, -45, -44, -43, -42, -41, -40, -39, -38, -37, -36, -35, -34, -33, -32, -31, -30, -29, -28, -27, -26, -25, -24, -23, -22, -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 0, 0, 0, 0, 10, 27, 64, 29, 86, 65, 72, 28, 38, 0});
            promise.resolve("done");    
         }else {
              promise.reject("","please connect printer!");      
-        }
+        }}
     }
 
     @ReactMethod
     private void setLang(String codepage,Promise promise){
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         if (ISCONNECT){
                byte codepageByte = Byte.parseByte(codepage);
         sendDataToPrinter(StringUtils.byteMerger(new byte[]{31, 27, 31, -1}, new byte[]{(byte) codepageByte, 10, 0}));
            promise.resolve("done");    
         }else {
              promise.reject("","please connect printer!");      
-        }
+        }}
     }
     @ReactMethod
     private void cancelChinese(){
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         if (ISCONNECT){
         // cancel -> 8 : use -> 0
         sendDataToPrinter(new byte[]{31, 27, 31, -65, 8, 0});
         }
-    }
+    }}
 
     @ReactMethod
     private void printBitmapBLE(String base64String,int w1,int w2,int isBLE ,Promise promise){
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         final Bitmap bitmap1 =  BitmapProcess.compressBmpByYourWidth
                 (decodeBase64ToBitmap(base64String),w1);
 
@@ -217,11 +243,15 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
            promise.reject("","OnFailed print img");
            disConnectBT(promise);
                     
-        }
+        }}
     }
     @ReactMethod
     private void connectBT(String macAddress,Promise promise){
-        
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         if (macAddress.equals(null)||macAddress.equals("")){
             promise.reject("Error connect BTE");
         }else {
@@ -250,11 +280,15 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         
            
             
-        }
+        }}
     }
     @ReactMethod
     private void disConnectBT(Promise promise){
-      
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
             myBinder.DisconnectCurrentPort(new TaskCallback() {
                 @Override
                 public void OnSucceed() {
@@ -270,11 +304,16 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 }
             });
         
-        
+            }
  }
 
     @ReactMethod 
     private void printRawData(String encode,Promise promise){
+          bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!bluetoothAdapter.isEnabled()) {
+                promise.reject("turnoff");
+              
+            }else {
         byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
          myBinder.Write(bytes, new TaskCallback() {
             @Override
@@ -285,7 +324,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             public void OnFailed() {
               promise.reject("error print raw");
             }
-        });
+        });}
     }
     
     @SuppressLint("MissingPermission")
@@ -294,8 +333,8 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         try {
             bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (!bluetoothAdapter.isEnabled()) {
-                Set<BluetoothDevice> device = bluetoothAdapter.getBondedDevices();
-                Log.d("TAG", "findAvalibleDevice: "+device.size());
+                promise.reject("turnoff");
+              
             }else {
 
                 if (!bluetoothAdapter.isDiscovering()) {
