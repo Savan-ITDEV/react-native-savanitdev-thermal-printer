@@ -3,10 +3,34 @@
 import Darwin
 import UIKit
 import Foundation
-
+import CoreBluetooth
 @objc(SavanitdevThermalPrinter)
-class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
-
+class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate,CBCentralManagerDelegate {
+    var statusBLE :Bool=false
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        switch central.state {
+                case .unknown:
+                    print("Bluetooth status is UNKNOWN")
+                case .resetting:
+                    print("Bluetooth status is RESETTING")
+                case .unsupported:
+                    print("Bluetooth is NOT SUPPORTED on this device")
+                case .unauthorized:
+                    print("Bluetooth is NOT AUTHORIZED for this app")
+                case .poweredOff:
+            statusBLE = false;
+                    print("Bluetooth is currently POWERED OFF")
+                    // Handle the case when Bluetooth is turned off
+                case .poweredOn:
+            statusBLE = true;
+                    print("Bluetooth is currently POWERED ON")
+                    // Handle the case when Bluetooth is turned on
+                @unknown default:
+                    print("A previously unknown state occurred")
+                }
+    }
+    
+var centralManager: CBCentralManager!
   var test:PrinterManager!
   var isConnectedGlobal:Bool=false
   // Create an array of Bike objects
@@ -45,33 +69,48 @@ class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
 
   @objc
   func initBLE() {
+    self.centralManager = CBCentralManager(delegate: self, queue: nil)
      self.manager = POSBLEManager.sharedInstance()
      self.manager.delegate = self
     print("init BLE")
   }
   @objc
   func startScanBLE() {
+      if(self.statusBLE == true){
      self.manager.poSdisconnectRootPeripheral()
      self.manager.poSstartScan()
     print("startScanBLE")
        self.addressCurrent = "";
+      }else{
+         
+          print("your ble is not enable")
+        
+      }
   }
+    
   @objc
   func disconnectBLE(_ id :String, resolver resolve :  @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock) {
-    do {
-      try self.manager.poSdisconnectRootPeripheral()
-       print("disconnect")
-          self.addressCurrent = "";
-        resolve("disconnect")
-     } catch {
-        print("Failed disconnect: \(error)")
-        reject("","Failed disconnect: \(error) ", nil)
-    }
-  }  
+      if(self.statusBLE == true){
+          do {
+              try self.manager.poSdisconnectRootPeripheral()
+              print("disconnect")
+              self.addressCurrent = "";
+              resolve("disconnect")
+          } catch {
+             
+              print("Failed disconnect: \(error)")
+              reject("","Failed disconnect: \(error) ", nil)
+          }
+      }else{
+          print("your ble is not enable")
+          reject("","your ble is not enable  ", nil)
+      }
+  }
   @objc
   func checkStatusBLE(_ id :String, resolver resolve :  @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if(self.statusBLE == true){
     do {
         try
         print("checkStatusBLE")
@@ -81,14 +120,17 @@ class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
         print("Failed disconnect: \(error)")
         reject("","Failed disconnect: \(error) ", nil)
     }
+      }else{
+          print("your ble is not enable")
+          reject("","your ble is not enable  ", nil)
+      }
   }
   @objc
   func connectBLE(_ identifiers :String,resolver resolve :  @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if(self.statusBLE == true){
       if(dataArr.count > 0){
     do {
-            
-     
             if let matchedPeripheral =  dataArr.first { $0.identifier.uuidString == identifiers }{
                 print("Found peripheral: \(matchedPeripheral.name ?? "Unknown")")
 //                let peripheral = dataArr[0]
@@ -111,10 +153,15 @@ class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
       }else{
           reject("","Please check your printer is enable or not ", nil)
       }
+      }else{
+         
+          reject("","Please check your printer is enable or not ", nil)
+      }
   }
     @objc
     func getListDevice(_ id :String, resolver resolve: @escaping RCTPromiseResolveBlock,
                        rejecter reject: @escaping RCTPromiseRejectBlock) {
+        if(self.statusBLE == true){
         if dataArr.count > 0 {
             var arr: [[String: Any]] = []
 
@@ -133,10 +180,15 @@ class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
             print("not found device")
             reject("", "not found device", nil)
         }
+        }else{
+          
+            reject("","Please check your printer is enable or not ", nil)
+        }
     }
   @objc
   func rawDataBLE(_ base64String :String, resolver resolve :  @escaping RCTPromiseResolveBlock,
                       rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if(self.statusBLE == true){
    if let data = Data(base64Encoded: base64String) {
     do {
         try self.manager.posWriteCommand(with: data)
@@ -150,12 +202,16 @@ class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
       print("Failed to decode base64 string into data.")
         reject("","Failed to decode base64 string into data", nil)
      }
+      }else{
+          reject("","Please check your printer is enable or not ", nil)
+      }
   }
   
   
   @objc
   func image64BaseBLE(_ base64String :String, resolver resolve :  @escaping RCTPromiseResolveBlock,
                       rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if(self.statusBLE == true){
     guard let imageData = Data(base64Encoded: base64String) else {
         print("Failed to decode base64 string into data.")
         reject("","Failed to decode base64 string into data.", nil)
@@ -183,6 +239,9 @@ class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate {
         print("Failed to send command: \(error)")
         reject("","Failed to send command: \(error) ", nil)
     }
+      }else{
+          reject("","Please check your printer is enable or not ", nil)
+      }
 }
   
  
