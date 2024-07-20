@@ -4,12 +4,12 @@ package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 folly_compiler_flags = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -Wno-comma -Wno-shorten-64-to-32'
 
 Pod::Spec.new do |s|
-  s.name         = "react-native-savanitdev-thermal-printer"
+ s.name         = "react-native-savanitdev-thermal-printer"
   s.version      = package["version"]
-  s.summary      = package["description"]
-  s.homepage     = package["homepage"]
-  s.license      = package["license"]
-  s.authors      = package["author"]
+  s.summary      = "create by savanitdev",
+  s.homepage     = 'https://www.savanitdev.la'
+  s.license      = "SavanitDev",
+  s.authors      = 'savanitdev'
 
   s.platforms    = { :ios => "11.0" }
   s.source       = { :git => ".git", :tag => "#{s.version}" }
