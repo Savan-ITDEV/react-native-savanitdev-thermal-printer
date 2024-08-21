@@ -16,13 +16,13 @@ const LINKING_ERROR =
 const SavanitdevThermalPrinter = NativeModules.SavanitdevThermalPrinter
   ? NativeModules.SavanitdevThermalPrinter
   : new Proxy(
-      {},
-      {
-        get() {
-          throw new Error(LINKING_ERROR);
-        },
-      }
-    );
+    {},
+    {
+      get() {
+        throw new Error(LINKING_ERROR);
+      },
+    }
+  );
 
 export function pingPinter(ip: string): Promise<boolean> {
   return SavanitdevThermalPrinter.pingPinter(ip);
@@ -79,9 +79,21 @@ export async function printImgNet(
   isDisconnect = true
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await SavanitdevThermalPrinter.connectNetImg(ip, img, w1, w2);
+    return await SavanitdevThermalPrinter.printImg(img, w1, w2, 0);
   } else {
     return SavanitdevThermalPrinter.printImgNet(ip, img, isDisconnect);
+  }
+}
+export async function printImgNetSticker(
+  ip: string,
+  img: string,
+  w1: number,
+  w2: number,
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return await SavanitdevThermalPrinter.printImg(img, w1, w2, 1);
+  } else {
+    return SavanitdevThermalPrinter.printImgNetSticker(ip, img, false);
   }
 }
 
@@ -303,9 +315,6 @@ export async function startScanBLE(): Promise<any[]> {
               name: `${i.name}-${k}`,
               deviceAddress: i.identifier,
             }));
-            console.log("====================================");
-            console.log(body);
-            console.log("====================================");
             resolve(body);
           })
           .catch((err) => {

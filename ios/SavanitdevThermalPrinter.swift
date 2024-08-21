@@ -460,6 +460,60 @@ var centralManager: CBCentralManager!
       }
   }
   
+   @objc
+  func printImgNetSticker(_ ip:String,base64String :String,isCut:Bool,resolver resolve : @escaping RCTPromiseResolveBlock,
+                rejecter reject: @escaping RCTPromiseRejectBlock)  -> Void {
+      print("init print \n");
+      if(self.isConnectedList.count > 0){
+          print("init isConnectedList \n");
+        if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
+            print("init objectArray \n");
+          if(self.isConnectedList[index]){
+              print("init index \n");
+            queueList[index].async {
+              // Convert the Img base64 string to Data
+              if let imageData = Data(base64Encoded: base64String) {
+                if let image = UIImage(data: imageData) { 
+                  let align:Data=PosCommand.selectAlignment(1);
+                  let Hight  :Data=PosCommand.printAndFeedLine();
+                  let imgData:Data=PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: image, andType: Dithering);
+                  let cut:Data=PosCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
+                  let spaceH1 = Data("    ".utf8);
+                  let spaceH2 = Data("    ".utf8);
+                    var concatenatedData = align + imgData + spaceH1 + spaceH2 + Hight;
+                    if(isCut){
+                      concatenatedData = concatenatedData + cut;
+                    }
+                  let printSucceed = self.printList[index].sendData(toPrinter: concatenatedData);
+                  if(printSucceed){
+                    print("print1 succeessfully\n"); 
+                    resolve("print done");
+                  }else{
+                    let status = self.printList[index].getPrinterStatus();
+                    if(status == "Error"){
+                      reject("ERROR_CODE", status  , nil)
+                    }
+                    else if(status == "Printer Disconnected"){
+                      if(self.objectArray.count > 0 ){
+                       self.connectIP(ip,resolver: resolve,rejecter: reject)
+                      }
+                    }
+                    else if(status == "Normal"){
+                        resolve("print Normal");
+                    }
+                   else
+                   {
+                    reject("ERROR_CODE", "status : \(status) ip : \(ip)"  , nil)
+                   }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+  }
+
   @objc
   func printEncodeNet(_ ip:String,base64String :String,isDisconnect:Bool,resolver resolve : @escaping RCTPromiseResolveBlock,
                 rejecter reject: @escaping RCTPromiseRejectBlock) -> Void   {

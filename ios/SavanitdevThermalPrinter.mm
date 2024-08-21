@@ -14,6 +14,10 @@ RCT_EXTERN_METHOD(printImgNet:(NSString *)ip base64String:(NSString *)base64Stri
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(printImgNetSticker:(NSString *)ip base64String:(NSString *)base64String isCut:(BOOL *)isCut
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(printEncodeNet:(NSString *)ip base64String:(NSString *)base64String isDisconnect:(BOOL *)isDisconnect
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
