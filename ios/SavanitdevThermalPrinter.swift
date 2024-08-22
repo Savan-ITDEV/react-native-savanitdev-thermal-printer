@@ -4,6 +4,7 @@ import Darwin
 import UIKit
 import Foundation
 import CoreBluetooth
+import CoreImage
 @objc(SavanitdevThermalPrinter)
 class SavanitdevThermalPrinter: NSObject,POSBLEManagerDelegate,CBCentralManagerDelegate {
     var statusBLE :Bool=false
@@ -63,9 +64,43 @@ var centralManager: CBCentralManager!
     self.manager.poSdisconnectRootPeripheral()
        self.addressCurrent = "";
   }
-
+    func monoImg(image: UIImage, threshold: CGFloat = 0.1) -> UIImage? {
+          // Convert UIImage to CIImage
+          guard let ciImage = CIImage(image: image) else { return nil }
+          
+          // Convert to grayscale
+          let grayscaleFilter = CIFilter(name: "CIColorControls")
+          grayscaleFilter?.setValue(ciImage, forKey: kCIInputImageKey)
+          grayscaleFilter?.setValue(0.0, forKey: kCIInputSaturationKey)  // Remove color
+          grayscaleFilter?.setValue(1.0, forKey: kCIInputContrastKey)    // Maximize contrast
+          
+          guard let grayscaleImage = grayscaleFilter?.outputImage else { return nil }
+          
+          // Apply threshold to create black and white effect
+          let thresholdFilter = CIFilter(name: "CIColorMatrix")
+          thresholdFilter?.setValue(grayscaleImage, forKey: kCIInputImageKey)
+          
+          // Set the threshold to control black and white conversion
+          let thresholdVector = CIVector(x: threshold, y: threshold, z: threshold, w: 0)
+          thresholdFilter?.setValue(thresholdVector, forKey: "inputRVector")
+          thresholdFilter?.setValue(thresholdVector, forKey: "inputGVector")
+          thresholdFilter?.setValue(thresholdVector, forKey: "inputBVector")
+          thresholdFilter?.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+          
+          guard let outputCIImage = thresholdFilter?.outputImage else { return nil }
+          
+          // Create a context and convert to UIImage
+          let context = CIContext(options: nil)
+          if let cgImage = context.createCGImage(outputCIImage, from: outputCIImage.extent) {
+              return UIImage(cgImage: cgImage)
+          }
+          
+          return nil
+      }
+    
   // ------------------ bluetooth function ------------------ //
     
+ 
 
   @objc
   func initBLE() {
@@ -420,9 +455,10 @@ var centralManager: CBCentralManager!
               // Convert the Img base64 string to Data
               if let imageData = Data(base64Encoded: base64String) {
                 if let image = UIImage(data: imageData) { 
+                  let img = self.monoImg(image: image, threshold: 0.1)
                   let align:Data=PosCommand.selectAlignment(1);
                   let Hight  :Data=PosCommand.printAndFeedLine();
-                  let imgData:Data=PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: image, andType: Dithering);
+                  let imgData:Data=PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: img, andType: Dithering);
                   let cut:Data=PosCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
                   let spaceH1 = Data("    ".utf8);
                   let spaceH2 = Data("    ".utf8);
@@ -473,10 +509,12 @@ var centralManager: CBCentralManager!
             queueList[index].async {
               // Convert the Img base64 string to Data
               if let imageData = Data(base64Encoded: base64String) {
-                if let image = UIImage(data: imageData) { 
+                 if let image = UIImage(data: imageData) {
+                 let img = self.monoImg(image: image, threshold: 0.1)
                   let align:Data=PosCommand.selectAlignment(1);
                   let Hight  :Data=PosCommand.printAndFeedLine();
-                  let imgData:Data=PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: image, andType: Dithering);
+                    
+                  let imgData:Data=PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: img, andType: Dithering);
                   let cut:Data=PosCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
                   let spaceH1 = Data("    ".utf8);
                   let spaceH2 = Data("    ".utf8);
