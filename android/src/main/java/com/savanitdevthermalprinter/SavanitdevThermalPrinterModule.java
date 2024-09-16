@@ -338,8 +338,8 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
                 IntentFilter filterStart = new IntentFilter(BluetoothDevice.ACTION_FOUND);
                 IntentFilter filterEnd = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-                context.registerReceiver(BtReciever, filterStart);
-                context.registerReceiver(BtReciever, filterEnd);
+                context.registerReceiver(BtReciever, filterStart, Context.RECEIVER_EXPORTED);
+                context.registerReceiver(BtReciever, filterEnd, Context.RECEIVER_EXPORTED);
                 Set<BluetoothDevice> device = bluetoothAdapter.getBondedDevices();
 
                 WritableMap result = Arguments.createMap();
@@ -404,9 +404,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
 
         IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
-        // registerReceiver(mUsbPermissionActionReceiver, filter);
-        context.registerReceiver(mUsbPermissionActionReceiver, filter);
-
+        context.registerReceiver(mUsbPermissionActionReceiver, filter, Context.RECEIVER_EXPORTED);
         PendingIntent mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION),
                 FLAG_IMMUTABLE);
 

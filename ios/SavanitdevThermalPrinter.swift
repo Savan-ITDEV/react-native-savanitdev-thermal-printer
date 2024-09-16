@@ -117,9 +117,7 @@ var centralManager: CBCentralManager!
     print("startScanBLE")
        self.addressCurrent = "";
       }else{
-         
           print("your ble is not enable")
-        
       }
   }
     

@@ -16,23 +16,14 @@ const LINKING_ERROR =
 const SavanitdevThermalPrinter = NativeModules.SavanitdevThermalPrinter
   ? NativeModules.SavanitdevThermalPrinter
   : new Proxy(
-    {},
-    {
-      get() {
-        throw new Error(LINKING_ERROR);
-      },
-    }
-  );
+      {},
+      {
+        get() {
+          throw new Error(LINKING_ERROR);
+        },
+      }
+    );
 
-export function pingPinter(ip: string): Promise<boolean> {
-  return SavanitdevThermalPrinter.pingPinter(ip);
-}
-export function onCreate() {
-  if (Platform.OS === "android") {
-    handleAndroidPermissions();
-    return SavanitdevThermalPrinter.onCreate();
-  }
-}
 export function connectNet(ip: string): Promise<boolean> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.connectNet(ip);
@@ -55,22 +46,7 @@ export function connectUSB(usbAddress: string): Promise<boolean> {
     return SavanitdevThermalPrinter.connectUSB(usbAddress);
   }
 }
-export function printImg(
-  img: string,
-  w1: number,
-  w2: number,
-  isCut: number
-): Promise<string> {
-  if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.printImg(img, w1, w2, isCut);
-  }
-}
 
-export function printTest(ip: string): Promise<string> {
-  if (Platform.OS === "ios") {
-    return SavanitdevThermalPrinter.printTest(ip);
-  }
-}
 export async function printImgNet(
   ip: string,
   img: string,
@@ -88,7 +64,7 @@ export async function printImgNetSticker(
   ip: string,
   img: string,
   w1: number,
-  w2: number,
+  w2: number
 ): Promise<string> {
   if (Platform.OS === "android") {
     return await SavanitdevThermalPrinter.printImg(img, w1, w2, 1);
@@ -143,15 +119,6 @@ export const handleAndroidPermissions = () => {
     console.log("error ", error);
   }
 };
-export function printBitmap(
-  img: string,
-  w1: number,
-  w2: number
-): Promise<string> {
-  if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.printBitmap(img, w1, w2);
-  }
-}
 
 export async function disConnect(ip: string): Promise<string> {
   if (Platform.OS === "android") {
@@ -266,7 +233,7 @@ export function cancelChinese(): Promise<string> {
     return SavanitdevThermalPrinter.cancelChinese();
   }
 }
-export function initialBLE(): Promise<string> {
+export function initialPrinter(): Promise<string> {
   if (Platform.OS === "android") {
     handleAndroidPermissions();
     return SavanitdevThermalPrinter.onCreate();
