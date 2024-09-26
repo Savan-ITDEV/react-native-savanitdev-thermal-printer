@@ -76,10 +76,9 @@ repositories {
   google()
 }
 
-
 dependencies {
   implementation fileTree(dir: "libs", include: ["*.jar"])
-//  implementation project(':libs')
+//   implementation project(':libs')
   // For < 0.71, this will be from the local maven repo
   // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
   //noinspection GradleDynamicVersion

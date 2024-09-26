@@ -8,7 +8,7 @@ module.exports = function androiManifestPlugin(config) {
     androidManifest["uses-feature"] = {
       $: {
         "android:name": "android.hardware.usb.host",
-        "android:required": "true",
+        "android:required": "false",
       },
     };
     androidManifest.application[0].activity[0]["meta-data"] = [

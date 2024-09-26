@@ -20,12 +20,16 @@ import android.graphics.BitmapFactory;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.IBinder;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
@@ -39,14 +43,19 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.module.annotations.ReactModule;
 
 import net.posprinter.posprinterface.IMyBinder;
+import net.posprinter.posprinterface.PrinterBinder;
 import net.posprinter.posprinterface.ProcessData;
 import net.posprinter.posprinterface.TaskCallback;
 import net.posprinter.service.PosprinterService;
+import net.posprinter.service.PrinterConnectionsService;
 import net.posprinter.utils.BitmapProcess;
 import net.posprinter.utils.BitmapToByteData;
+import net.posprinter.utils.DataForSendToPrinterPos58;
 import net.posprinter.utils.DataForSendToPrinterPos80;
 import net.posprinter.utils.DataForSendToPrinterPos76;
+import net.posprinter.utils.DataForSendToPrinterTSC;
 import net.posprinter.utils.PosPrinterDev;
+import net.posprinter.utils.RoundQueue;
 import net.posprinter.utils.StringUtils;
 
 import static net.posprinter.utils.StringUtils.byteMerger;
@@ -56,6 +65,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 @ReactModule(name = SavanitdevThermalPrinterModule.NAME)
 public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
@@ -67,10 +78,30 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public static IMyBinder myBinder;
     public static boolean ISCONNECT = false;
     public static String address = "";
+    public static PrinterBinder printerBinder;
     UsbManager mUsbManager;
+    protected String[] mDataset;
+    private static int DATASET_COUNT = 20;
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
-
     Context context;
+    ServiceConnection mSerconnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            myBinder = (IMyBinder) service;
+            Log.e("myBinder", "connect");
+            Toast toast = Toast.makeText(context, "connect", Toast.LENGTH_SHORT);
+            toast.show();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.e("myBinder", "disconnect");
+            myBinder = null;
+            Log.e("printerBinder", "disconnect");
+            // Toast toast = Toast.makeText(context, "disconnect", Toast.LENGTH_SHORT);
+            // toast.show();
+        }
+    };
 
     public SavanitdevThermalPrinterModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -83,74 +114,478 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         return NAME;
     }
 
-    ServiceConnection mSerconnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            myBinder = (IMyBinder) service;
-            Log.e("myBinder", "connect");
-            // Toast toast = Toast.makeText(context, "connect", Toast.LENGTH_SHORT);
-            // toast.show();
-
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.e("myBinder", "disconnect");
-            Toast toast = Toast.makeText(context, "disconnect", Toast.LENGTH_SHORT);
-            toast.show();
-        }
-    };
-
     @ReactMethod
-    public void checkStatusBLE(Promise promise) {
-        if (ISCONNECT == true) {
-            promise.resolve("connect");
-        } else {
-            promise.reject("disconnect");
-            ISCONNECT = false;
+    private void onCreate(Promise promise) {
+        try {
+            Intent intent = new Intent(context, PosprinterService.class);
+            context.bindService(intent, mSerconnection, BIND_AUTO_CREATE);
+        } catch (Exception exe) {
+            Log.d("TAG", "Exception--: " + exe);
+            promise.reject("ERROR", exe.toString());
         }
     }
 
     @ReactMethod
-    private void printBitmapBLE2(String base64String, int w1, int w2, int isBLE, Promise promise) {
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (!bluetoothAdapter.isEnabled()) {
-            promise.reject("turnoff");
+    private void initDataset() {
+        DATASET_COUNT = myBinder.GetPrinterInfoList().size();
+        mDataset = new String[DATASET_COUNT];
+        for (int i = 0; i < DATASET_COUNT; i++) {
+            mDataset[i] = myBinder.GetPrinterInfoList().get(i).printerName;
+        }
+    }
+
+    private void AddPrinter(PosPrinterDev.PrinterInfo printer) {
+        myBinder.AddPrinter(printer, new TaskCallback() {
+            @Override
+            public void OnSucceed() {
+
+            }
+
+            @Override
+            public void OnFailed() {
+
+            }
+        });
+    }
+
+    @ReactMethod
+    public void connectMulti(String address, int portType, final Promise promise) {
+        if (address != "") {
+            Log.d("check conncet :", "readBuffer ip: " + address);
+            boolean isConnected = printerBinder.isConnect(address);
+            String name = "printer" + myBinder.GetPrinterInfoList().size();
+            PosPrinterDev.PrinterInfo printer;
+            switch (portType) {
+                case 0:
+                    printer = new PosPrinterDev.PrinterInfo(name, PosPrinterDev.PortType.Ethernet, address);
+                    AddPrinter(printer);
+                    break;
+                case 1:
+                    String mac = address.toString().trim();
+                    printer = new PosPrinterDev.PrinterInfo(name, PosPrinterDev.PortType.Bluetooth, mac);
+                    AddPrinter(printer);
+                    break;
+                case 2:
+                    String usbAddress = address.toString().trim();
+                    printer = new PosPrinterDev.PrinterInfo(name, PosPrinterDev.PortType.USB, usbAddress);
+                    printer.context = context;
+                    AddPrinter(printer);
+                    break;
+            }
 
         } else {
-            final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), w1);
+            promise.reject(new Exception("CONNECT_ADDRESS_FAIL_NULL"));
+        }
+    }
 
-            if (ISCONNECT) {
-                myBinder.WriteSendData(new TaskCallback() {
+    @ReactMethod
+    public void printImgMulti(String ip, String base64String, int width, Promise promise) {
+        if (ip != null) {
+            int index = myBinder.GetPrinterInfoList().indexOf(ip);
+            if (index != -1) {
+                final Bitmap bitmap = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
+
+                myBinder.SendDataToPrinter(myBinder.GetPrinterInfoList().get(index).printerName, new TaskCallback() {
                     @Override
                     public void OnSucceed() {
-                        promise.resolve("1");
+                        promise.resolve("PRINT_SUCCESS");
                     }
 
                     @Override
                     public void OnFailed() {
-                        promise.reject("", "OnFailed print img");
-                        disConnectNet();
+                        promise.reject(new Exception("PRINT_FAIL"));
                     }
                 }, new ProcessData() {
                     @Override
                     public List<byte[]> processDataBeforeSend() {
                         List<byte[]> list = new ArrayList<>();
-                        list.add(DataForSendToPrinterPos76.initializePrinter());
-                        list.add(DataForSendToPrinterPos76.selectBmpModel(0, bitmap1,
-                                BitmapToByteData.BmpType.Dithering));
-                        list.add(DataForSendToPrinterPos76.printAndFeedLine());
+                        final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, width);
+                        final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
+                        list.add(DataForSendToPrinterPos80.initializePrinter());
+                        list.add(DataForSendToPrinterPos80.printRasterBmp(0, bitmapToPrint,
+                                BitmapToByteData.BmpType.Dithering,
+                                BitmapToByteData.AlignType.Center, width));
+                        list.add(DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(0x42, 0x66));
                         return list;
                     }
                 });
             } else {
-                promise.reject("", "OnFailed print img");
-                disConnectBT(promise);
+                promise.reject(new Exception("CONNECT_FAIL_IP_NULL"));
+            }
+        } else {
+            promise.reject(new Exception("CONNECT_BLE_FAIL_IP_NULL"));
+        }
+    }
 
+    @ReactMethod
+    public void printRawDataMulti(String ip, String base64String, int width, Promise promise) {
+        if (ip != "") {
+            int index = myBinder.GetPrinterInfoList().indexOf(ip);
+            if (index != -1) {
+                final Bitmap bitmap = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
+                myBinder.SendDataToPrinter(myBinder.GetPrinterInfoList().get(index).printerName, new TaskCallback() {
+                    @Override
+                    public void OnSucceed() {
+                        promise.resolve("PRINT_SUCCESS");
+                    }
+
+                    @Override
+                    public void OnFailed() {
+                        promise.reject(new Exception("PRINT_FAIL"));
+                    }
+                }, new ProcessData() {
+                    @Override
+                    public List<byte[]> processDataBeforeSend() {
+                        List<byte[]> list = new ArrayList<>();
+                        final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, width);
+                        final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
+                        list.add(DataForSendToPrinterPos80.initializePrinter());
+                        list.add(DataForSendToPrinterPos80.printRasterBmp(0, bitmapToPrint,
+                                BitmapToByteData.BmpType.Dithering,
+                                BitmapToByteData.AlignType.Center, width));
+                        list.add(DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(0x42, 0x66));
+                        return list;
+                    }
+                });
+            } else {
+                promise.reject(new Exception("CONNECT_FAIL_IP_NULL"));
+            }
+        } else {
+            promise.reject(new Exception("CONNECT_FAIL"));
+        }
+    }
+
+    @ReactMethod
+    private void pingDevice(String ip, int timeout, Promise promise) {
+        try {
+            NetworkUtils.fastPingAndGetNetworkSpeed(ip, timeout, promise);
+        } catch (Exception exe) {
+            Log.d("TAG", "Exception--: " + exe);
+            promise.reject("ERROR", exe.toString());
+        }
+    }
+
+    @ReactMethod
+    public void printPicMulti(String address, String imagePath,
+            final ReadableMap options, final Promise promise) {
+        Uri imageUri = Uri.parse(imagePath);
+        String realPath = imageUri.getPath();
+
+        int size = options.getInt("size");
+        int width = options.getInt("width");
+
+        final boolean isDisconnect;
+        if (options.hasKey("is_disconnect")) {
+            isDisconnect = options.getBoolean("is_disconnect");
+        } else {
+            isDisconnect = false;
+        }
+
+        final boolean isCutPaper;
+        if (options.hasKey("cut_paper")) {
+            isCutPaper = options.getBoolean("cut_paper");
+        } else {
+            isCutPaper = true;
+        }
+
+        String mode;
+        if (options.hasKey("mode")) {
+            mode = options.getString("mode");
+        } else {
+            mode = "THERMAL";
+        }
+
+        final Bitmap bitmap = BitmapFactory.decodeFile(realPath);
+        if (mode.equals("LABEL")) {
+            int paper_size;
+            if (options.hasKey("paper_size")) {
+                paper_size = options.getInt("paper_size");
+            } else {
+                paper_size = 50;
+            }
+            if (bitmap != null && address != null) {
+                final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, width);
+                final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
+                printerBinder.writeDataByYouself(
+                        address,
+                        new TaskCallback() {
+                            @Override
+                            public void OnSucceed() {
+                                promise.resolve("SEND_SUCCESS");
+                                if (isDisconnect) {
+                                    TimerTask task = new TimerTask() {
+                                        @Override
+                                        public void run() {
+                                            printerBinder.disconnectCurrentPort(
+                                                    address, new TaskCallback() {
+                                                        @Override
+                                                        public void OnSucceed() {
+                                                            Log.d("disconnectCurrentPort",
+                                                                    "disconnect success");
+                                                        }
+
+                                                        @Override
+                                                        public void OnFailed() {
+                                                        }
+                                                    });
+                                        }
+                                    };
+                                    Timer timer = new Timer();
+                                    timer.schedule(task, 1500);
+                                }
+                            }
+
+                            @Override
+                            public void OnFailed() {
+                                promise.reject(new Exception("SEND_ERROR"));
+                            }
+                        },
+                        new ProcessData() {
+                            @Override
+                            public List<byte[]> processDataBeforeSend() {
+                                List<byte[]> list = new ArrayList<>();
+                                // 设置标签纸大小
+                                list.add(DataForSendToPrinterTSC.sizeBymm(paper_size, 30));
+                                // 设置间隙
+                                list.add(DataForSendToPrinterTSC.gapBymm(3, 0));
+                                // 清除缓存
+                                list.add(DataForSendToPrinterTSC.cls());
+                                list.add(DataForSendToPrinterTSC.bitmap(
+                                        -2, 10, 0, bitmapToPrint,
+                                        BitmapToByteData.BmpType.Threshold));
+                                list.add(DataForSendToPrinterTSC.print(1));
+                                return list;
+                            }
+                        });
+            } else {
+                promise.reject(new Exception("NOT_CONNECT_TO_PRINTER"));
+            }
+        } else {
+            if (bitmap != null && address != null) {
+                final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, width);
+                final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
+                printerBinder.writeDataByYouself(
+                        address,
+                        new TaskCallback() {
+                            @Override
+                            public void OnSucceed() {
+                            }
+
+                            @Override
+                            public void OnFailed() {
+                                promise.reject(new Exception("SEND_ERROR"));
+                            }
+                        },
+                        new ProcessData() {
+                            @Override
+                            public List<byte[]> processDataBeforeSend() {
+                                return null;
+                            }
+
+                        });
+            } else {
+                promise.reject(new Exception("NOT_CONNECT_TO_PRINTER"));
             }
         }
     }
 
+    @ReactMethod
+    private void printImgByte(String base64String, int width, Promise promise) {
+        if (ISCONNECT) {
+            final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
+            myBinder.WriteSendData(new TaskCallback() {
+                @Override
+                public void OnSucceed() {
+                    promise.resolve("print done");
+                }
+
+                @Override
+                public void OnFailed() {
+                    promise.reject("ERROR", "OnFailed printImg");
+                    // disConnectNet(promise);
+                }
+            }, new ProcessData() {
+                @Override
+                public List<byte[]> processDataBeforeSend() {
+                    List<byte[]> list = new ArrayList<>();
+                    list.add(DataForSendToPrinterPos80.printRasterBmp(0, bitmap1, BitmapToByteData.BmpType.Dithering,
+                            BitmapToByteData.AlignType.Center, width));
+                    return list;
+                }
+            });
+        } else {
+            promise.reject("0", "please connect device first!");
+        }
+    }
+
+    @ReactMethod
+    private void printImgWithTimeout(String base64String, int size, boolean isCutPaper, int width, int cutCount,
+            int timeout, Promise promise) {
+        if (ISCONNECT) {
+            final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
+            final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
+            myBinder.WriteSendData(new TaskCallback() {
+                @Override
+                public void OnSucceed() {
+                    promise.resolve("SEND_SUCCESS");
+                    if (ISCONNECT) {
+                        TimerTask task = new TimerTask() {
+                            @Override
+                            public void run() {
+                                disConnectNet();
+                            }
+                        };
+                        Timer timer = new Timer();
+                        timer.schedule(task, timeout);
+                    }
+                }
+
+                @Override
+                public void OnFailed() {
+                    promise.reject("ERROR", "OnFailed printImg");
+                    // disConnectNet(promise);
+                }
+            }, new ProcessData() {
+                @Override
+                public List<byte[]> processDataBeforeSend() {
+                    List<byte[]> list = new ArrayList<>();
+                    if (size == 58) {
+                        list.add(DataForSendToPrinterPos58.initializePrinter());
+                    } else {
+                        list.add(DataForSendToPrinterPos80.initializePrinter());
+                    }
+                    List<Bitmap> blist = new ArrayList<>();
+                    blist = BitmapProcess.cutBitmap(cutCount, bitmapToPrint);
+                    for (int i = 0; i < blist.size(); i++) {
+                        if (size == 58) {
+                            list.add(DataForSendToPrinterPos58.printRasterBmp(
+                                    0, blist.get(i), BitmapToByteData.BmpType.Dithering,
+                                    BitmapToByteData.AlignType.Left, width));
+                        } else {
+                            list.add(DataForSendToPrinterPos80.printRasterBmp(
+                                    0, blist.get(i), BitmapToByteData.BmpType.Dithering,
+                                    BitmapToByteData.AlignType.Left, width));
+                        }
+                    }
+
+                    if (size == 58 && isCutPaper) {
+                        list.add(DataForSendToPrinterPos58.printAndFeedLine());
+                    } else if (isCutPaper) {
+                        list.add(DataForSendToPrinterPos80.printAndFeedLine());
+                    }
+
+                    if (size == 80 && isCutPaper) {
+                        list.add(
+                                DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(
+                                        0x42, 0x66));
+                    }
+                    return list;
+                }
+            });
+        } else {
+            promise.reject("0", "please connect device first!");
+        }
+    }
+
+    @ReactMethod
+    public void StopMonitorPrinter(Promise promise) {
+        if (ISCONNECT == true) {
+            myBinder.StopMonitorPrinter();
+            promise.resolve("SUCCESS");
+        } else {
+            promise.reject(new Exception("GetPrinterStatus Fail"));
+            ISCONNECT = false;
+        }
+    }
+
+    @ReactMethod
+    public void GetPrinterStatus(Promise promise) {
+        if (ISCONNECT == true) {
+            String status = myBinder.GetPrinterStatus().toString();
+            promise.resolve(status);
+        } else {
+            promise.reject(new Exception("GetPrinterStatus Fail"));
+            ISCONNECT = false;
+        }
+    }
+
+    @ReactMethod
+    public void ClearBuffer(Promise promise) {
+        if (ISCONNECT == true) {
+            myBinder.ClearBuffer();
+            promise.resolve("true");
+        } else {
+            promise.reject(new Exception("ClearBuffer_FAIL"));
+            ISCONNECT = false;
+        }
+    }
+
+    @ReactMethod
+    public void ReadBuffer(Promise promise) {
+        RoundQueue<byte[]> queue = myBinder.ReadBuffer();
+        if (queue != null && queue.realSize() > 0) {
+            // The queue is not empty
+            WritableMap result = Arguments.createMap();
+            result.putInt("queueSize", queue.realSize());
+            promise.resolve(result);
+        } else {
+            // The queue is empty
+            promise.resolve(null);
+        }
+    }
+
+    public Bitmap convertGreyImg(Bitmap img) {
+        int width = img.getWidth();
+        int height = img.getHeight();
+
+        int[] pixels = new int[width * height];
+
+        img.getPixels(pixels, 0, width, 0, 0, width, height);
+
+        // The arithmetic average of a grayscale image; a threshold
+        double redSum = 0, greenSum = 0, blueSun = 0;
+        double total = width * height;
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                int grey = pixels[width * i + j];
+
+                int red = ((grey & 0x00FF0000) >> 16);
+                int green = ((grey & 0x0000FF00) >> 8);
+                int blue = (grey & 0x000000FF);
+
+                redSum += red;
+                greenSum += green;
+                blueSun += blue;
+            }
+        }
+        int m = (int) (redSum / total);
+
+        // Conversion monochrome diagram
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                int grey = pixels[width * i + j];
+
+                int alpha1 = 0xFF << 24;
+                int red = ((grey & 0x00FF0000) >> 16);
+                int green = ((grey & 0x0000FF00) >> 8);
+                int blue = (grey & 0x000000FF);
+
+                if (red >= m) {
+                    red = green = blue = 255;
+                } else {
+                    red = green = blue = 0;
+                }
+                grey = alpha1 | (red << 16) | (green << 8) | blue;
+                pixels[width * i + j] = grey;
+            }
+        }
+        Bitmap mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        mBitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+        return mBitmap;
+    }
+
+    // function single connection
     @ReactMethod
     private void printLangPrinter(Promise promise) {
 
@@ -207,12 +642,13 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 myBinder.WriteSendData(new TaskCallback() {
                     @Override
                     public void OnSucceed() {
-                        promise.resolve("1");
+                        promise.resolve("SUCCESS");
+
                     }
 
                     @Override
                     public void OnFailed() {
-                        promise.reject("", "OnFailed print img");
+                        promise.reject(new Exception("SEND_ERROR"));
                         disConnectNet();
                     }
                 }, new ProcessData() {
@@ -307,7 +743,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     private void printRawData(String encode, Promise promise) {
-
         byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
         myBinder.Write(bytes, new TaskCallback() {
             @Override
@@ -338,8 +773,12 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
                 IntentFilter filterStart = new IntentFilter(BluetoothDevice.ACTION_FOUND);
                 IntentFilter filterEnd = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-                context.registerReceiver(BtReciever, filterStart, Context.RECEIVER_EXPORTED);
-                context.registerReceiver(BtReciever, filterEnd, Context.RECEIVER_EXPORTED);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.registerReceiver(BtReciever, filterStart, Context.RECEIVER_EXPORTED);
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.registerReceiver(BtReciever, filterEnd, Context.RECEIVER_EXPORTED);
+                }
                 Set<BluetoothDevice> device = bluetoothAdapter.getBondedDevices();
 
                 WritableMap result = Arguments.createMap();
@@ -404,7 +843,9 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
 
         IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
-        context.registerReceiver(mUsbPermissionActionReceiver, filter, Context.RECEIVER_EXPORTED);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.registerReceiver(mUsbPermissionActionReceiver, filter, Context.RECEIVER_EXPORTED);
+        }
         PendingIntent mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION),
                 FLAG_IMMUTABLE);
 
@@ -428,13 +869,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }
     }
 
-    @ReactMethod
-    public void onCreate() {
-        Intent intent = new Intent(context, PosprinterService.class);
-        context.bindService(intent, mSerconnection, BIND_AUTO_CREATE);
-        tryGetUsbPermission();
-    }
-
     public static Bitmap decodeBase64ToBitmap(String base64String) {
         byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
@@ -447,7 +881,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 @Override
                 public void OnSucceed() {
                     ISCONNECT = false;
-
                 }
 
                 @Override
@@ -458,110 +891,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             });
         }
 
-    }
-
-    @ReactMethod
-    private void connectNetImg(String ip, String base64String, int w1, int w2, Promise promise) {
-
-        if (ip != null) {
-            if (ISCONNECT) {
-                myBinder.DisconnectCurrentPort(new TaskCallback() {
-                    @Override
-                    public void OnSucceed() {
-
-                    }
-
-                    @Override
-                    public void OnFailed() {
-
-                    }
-                });
-            } else {
-                myBinder.ConnectNetPort(ip, 9100, new TaskCallback() {
-                    @Override
-                    public void OnSucceed() {
-                        ISCONNECT = true;
-
-                        printBitmap(base64String, w1, w2, promise);
-                    }
-
-                    @Override
-                    public void OnFailed() {
-                        ISCONNECT = false;
-
-                        disConnectNet();
-                    }
-                });
-            }
-
-        } else {
-
-        }
-
-    }
-
-    @ReactMethod
-    private void printBitmap(String base64String, int w1, int w2, Promise promise) {
-        final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), w1);
-
-        if (ISCONNECT) {
-            myBinder.WriteSendData(new TaskCallback() {
-                @Override
-                public void OnSucceed() {
-                    promise.resolve("1");
-
-                }
-
-                @Override
-                public void OnFailed() {
-                    promise.reject("", "OnFailed print img");
-                    disConnectNet();
-
-                }
-            }, new ProcessData() {
-                @Override
-                public List<byte[]> processDataBeforeSend() {
-                    List<byte[]> list = new ArrayList<>();
-                    list.add(DataForSendToPrinterPos80.initializePrinter());
-                    list.add(DataForSendToPrinterPos80.printRasterBmp(0, bitmap1, BitmapToByteData.BmpType.Dithering,
-                            BitmapToByteData.AlignType.Right, w2));
-                    list.add(DataForSendToPrinterPos80.printAndFeedLine());
-                    list.add(DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(0x42, 0x66));
-                    return list;
-                }
-            });
-        } else {
-            promise.reject("", "OnFailed print img");
-            disConnectNet();
-
-        }
-    }
-
-    @ReactMethod
-    private void pingPinter(String ip, Promise promise) {
-
-        if (ip != null) {
-            myBinder.ConnectNetPort(ip, 9100, new TaskCallback() {
-                @Override
-                public void OnSucceed() {
-                    // disConnectNet();
-                    promise.resolve(ip);
-                    Log.e("App Notify connectNet", "connect OnSucceed");
-                }
-
-                @Override
-                public void OnFailed() {
-                    // disConnectNet();
-                    promise.reject("", "OnFailed connect der");
-                    Log.e("App Notify connectNet", "connect OnFailed");
-
-                }
-            });
-
-        } else {
-            promise.reject("", "OnFailed connect der 2 ");
-            Log.e("App Notify connectNet", "connect OnFailed");
-        }
     }
 
     @ReactMethod
@@ -576,7 +905,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
                 @Override
                 public void OnFailed() {
-                    promise.reject("0", "OnFailed printImg");
+                    promise.reject("ERROR", "OnFailed printImg");
                     // disConnectNet(promise);
                 }
             }, new ProcessData() {
@@ -851,13 +1180,10 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void line(int length) {
         String line = new String(new char[length]).replace("\0", ".");
-
         // Convert the string to bytes using the existing method
         byte[] lineBytes = strTobytes(line);
-
         // Add a carriage return and line feed to move to the next line
         byte[] newline = new byte[] { 13, 10 }; // CR LF
-
         // Combine the line bytes with the newline bytes
         byte[] data = byteMerger(lineBytes, newline);
 
