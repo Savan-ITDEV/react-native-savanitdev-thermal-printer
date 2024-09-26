@@ -78,7 +78,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public static IMyBinder myBinder;
     public static boolean ISCONNECT = false;
     public static String address = "";
-    public static PrinterBinder printerBinder;
     UsbManager mUsbManager;
     protected String[] mDataset;
     private static int DATASET_COUNT = 20;
@@ -97,7 +96,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         public void onServiceDisconnected(ComponentName name) {
             Log.e("myBinder", "disconnect");
             myBinder = null;
-            Log.e("printerBinder", "disconnect");
             // Toast toast = Toast.makeText(context, "disconnect", Toast.LENGTH_SHORT);
             // toast.show();
         }
@@ -147,12 +145,9 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             }
         });
     }
-
     @ReactMethod
     public void connectMulti(String address, int portType, final Promise promise) {
         if (address != "") {
-            Log.d("check conncet :", "readBuffer ip: " + address);
-            boolean isConnected = printerBinder.isConnect(address);
             String name = "printer" + myBinder.GetPrinterInfoList().size();
             PosPrinterDev.PrinterInfo printer;
             switch (portType) {
@@ -296,97 +291,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }
 
         final Bitmap bitmap = BitmapFactory.decodeFile(realPath);
-        if (mode.equals("LABEL")) {
-            int paper_size;
-            if (options.hasKey("paper_size")) {
-                paper_size = options.getInt("paper_size");
-            } else {
-                paper_size = 50;
-            }
-            if (bitmap != null && address != null) {
-                final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, width);
-                final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
-                printerBinder.writeDataByYouself(
-                        address,
-                        new TaskCallback() {
-                            @Override
-                            public void OnSucceed() {
-                                promise.resolve("SEND_SUCCESS");
-                                if (isDisconnect) {
-                                    TimerTask task = new TimerTask() {
-                                        @Override
-                                        public void run() {
-                                            printerBinder.disconnectCurrentPort(
-                                                    address, new TaskCallback() {
-                                                        @Override
-                                                        public void OnSucceed() {
-                                                            Log.d("disconnectCurrentPort",
-                                                                    "disconnect success");
-                                                        }
 
-                                                        @Override
-                                                        public void OnFailed() {
-                                                        }
-                                                    });
-                                        }
-                                    };
-                                    Timer timer = new Timer();
-                                    timer.schedule(task, 1500);
-                                }
-                            }
-
-                            @Override
-                            public void OnFailed() {
-                                promise.reject(new Exception("SEND_ERROR"));
-                            }
-                        },
-                        new ProcessData() {
-                            @Override
-                            public List<byte[]> processDataBeforeSend() {
-                                List<byte[]> list = new ArrayList<>();
-                                // 设置标签纸大小
-                                list.add(DataForSendToPrinterTSC.sizeBymm(paper_size, 30));
-                                // 设置间隙
-                                list.add(DataForSendToPrinterTSC.gapBymm(3, 0));
-                                // 清除缓存
-                                list.add(DataForSendToPrinterTSC.cls());
-                                list.add(DataForSendToPrinterTSC.bitmap(
-                                        -2, 10, 0, bitmapToPrint,
-                                        BitmapToByteData.BmpType.Threshold));
-                                list.add(DataForSendToPrinterTSC.print(1));
-                                return list;
-                            }
-                        });
-            } else {
-                promise.reject(new Exception("NOT_CONNECT_TO_PRINTER"));
-            }
-        } else {
-            if (bitmap != null && address != null) {
-                final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(bitmap, width);
-                final Bitmap bitmapToPrint = convertGreyImg(bitmap1);
-                printerBinder.writeDataByYouself(
-                        address,
-                        new TaskCallback() {
-                            @Override
-                            public void OnSucceed() {
-                            }
-
-                            @Override
-                            public void OnFailed() {
-                                promise.reject(new Exception("SEND_ERROR"));
-                            }
-                        },
-                        new ProcessData() {
-                            @Override
-                            public List<byte[]> processDataBeforeSend() {
-                                return null;
-                            }
-
-                        });
-            } else {
-                promise.reject(new Exception("NOT_CONNECT_TO_PRINTER"));
-            }
-        }
     }
 
     @ReactMethod
@@ -940,11 +845,10 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                         connectNet(ip, promise);
                         // promise.resolve(Boolean.toString(ISCONNECT));
                     }
-
                     @Override
                     public void OnFailed() {
                         ISCONNECT = true;
-                        promise.reject(Boolean.toString(ISCONNECT));
+                        promise.reject(Boolean.toString(true));
                     }
                 });
             } else {
@@ -952,20 +856,18 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     @Override
                     public void OnSucceed() {
                         ISCONNECT = true;
-                        promise.resolve(Boolean.toString(ISCONNECT));
+                        promise.resolve(Boolean.toString(true));
                     }
-
                     @Override
                     public void OnFailed() {
                         ISCONNECT = false;
-                        promise.reject(Boolean.toString(ISCONNECT));
+                        promise.reject(Boolean.toString(false));
 
                     }
                 });
             }
-
         } else {
-
+            promise.reject(Boolean.toString(false));
         }
     }
 
