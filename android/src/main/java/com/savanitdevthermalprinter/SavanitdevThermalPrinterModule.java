@@ -3,7 +3,6 @@ package com.savanitdevthermalprinter;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Context.BIND_AUTO_CREATE;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
@@ -14,7 +13,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.usb.UsbDevice;
@@ -23,7 +21,6 @@ import android.hardware.usb.UsbManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
-import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
@@ -32,10 +29,9 @@ import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.bridge.WritableNativeArray;
-import com.facebook.react.bridge.WritableNativeMap;
+
 import androidx.annotation.NonNull;
-import com.facebook.react.bridge.Callback;
+
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -43,17 +39,13 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.module.annotations.ReactModule;
 
 import net.posprinter.posprinterface.IMyBinder;
-import net.posprinter.posprinterface.PrinterBinder;
 import net.posprinter.posprinterface.ProcessData;
 import net.posprinter.posprinterface.TaskCallback;
 import net.posprinter.service.PosprinterService;
-import net.posprinter.service.PrinterConnectionsService;
 import net.posprinter.utils.BitmapProcess;
 import net.posprinter.utils.BitmapToByteData;
 import net.posprinter.utils.DataForSendToPrinterPos58;
 import net.posprinter.utils.DataForSendToPrinterPos80;
-import net.posprinter.utils.DataForSendToPrinterPos76;
-import net.posprinter.utils.DataForSendToPrinterTSC;
 import net.posprinter.utils.PosPrinterDev;
 import net.posprinter.utils.RoundQueue;
 import net.posprinter.utils.StringUtils;
@@ -67,6 +59,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import posprinter.IDeviceConnection;
+import posprinter.POSConnect;
+import posprinter.POSPrinter;
+import posprinter.ZPLPrinter;
 
 @ReactModule(name = SavanitdevThermalPrinterModule.NAME)
 public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
@@ -81,6 +80,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     UsbManager mUsbManager;
     protected String[] mDataset;
     private static int DATASET_COUNT = 20;
+    private IDeviceConnection[] connections = new IDeviceConnection[99];
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     Context context;
     ServiceConnection mSerconnection = new ServiceConnection() {
@@ -124,11 +124,119 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    private void initDataset() {
-        DATASET_COUNT = myBinder.GetPrinterInfoList().size();
-        mDataset = new String[DATASET_COUNT];
-        for (int i = 0; i < DATASET_COUNT; i++) {
-            mDataset[i] = myBinder.GetPrinterInfoList().get(i).printerName;
+    public void printRawDataX(int index, String encode, Promise promise) {
+        try {
+            POSPrinter printer = new POSPrinter(connections[index]);
+            byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+            printer.sendData(bytes).feedLine();
+            promise.resolve("SUCCESS");
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectNetX(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_ETHERNET: ");
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_ETHERNET);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectUSBX(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_USB: ");
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_USB);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectBTX(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_BLUETOOTH: ");
+
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_BLUETOOTH);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectSERIAL(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_SERIAL: ");
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_SERIAL);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void disConnectX(String ip, int index, Promise promise) {
+        try {
+            connections[index].close();
+            promise.resolve("DISCONNECT");
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void printRawDataZPL(String ip, int index, String encode, Promise promise) {
+        try {
+            ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+            printer.sendData(bytes).addEnd();
+            promise.resolve("SUCCESS");
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    private void connectList(int code, Promise promise) {
+        if (code == POSConnect.CONNECT_SUCCESS) {
+            Log.d("TAG", "CONNECT_SUCCESS: ");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {
+                    promise.resolve("CONNECTED");
+                });
+            }
+        } else {
+            Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+            promise.reject("ERROR", "CONNECT_INTERRUPT");
+        }
+    }
+
+    private void connectListener(int index, int code, Promise promise) {
+        if (code == POSConnect.CONNECT_SUCCESS) {
+            Log.d("ALERT", "CONNECT_SUCCESS: ");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {
+                    promise.resolve("CONNECTED");
+                });
+            }
+        } else {
+            Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+            connections[index].close();
+            promise.reject("ERROR", "CONNECT_INTERRUPT");
         }
     }
 
@@ -145,6 +253,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             }
         });
     }
+
     @ReactMethod
     public void connectMulti(String address, int portType, final Promise promise) {
         if (address != "") {
@@ -845,6 +954,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                         connectNet(ip, promise);
                         // promise.resolve(Boolean.toString(ISCONNECT));
                     }
+
                     @Override
                     public void OnFailed() {
                         ISCONNECT = true;
@@ -858,6 +968,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                         ISCONNECT = true;
                         promise.resolve(Boolean.toString(true));
                     }
+
                     @Override
                     public void OnFailed() {
                         ISCONNECT = false;

@@ -138,6 +138,7 @@ export async function disConnect(ip: string): Promise<string> {
     return await SavanitdevThermalPrinter.disconnectNet(ip);
   }
 }
+
 export function findAvailableDevice() {
   if (Platform.OS === "android") {
     const arr = [];
@@ -167,16 +168,12 @@ export function printText(): Promise<string> {
     return SavanitdevThermalPrinter.printText();
   }
 }
-export function initDataset(): Promise<string> {
-  if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.initDataset();
-  }
-}
 export function GetPrinterStatus(): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.GetPrinterStatus();
   }
 }
+
 export function StopMonitorPrinter(): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.StopMonitorPrinter();
@@ -215,11 +212,14 @@ export function printImgMulti(
   }
 }
 export function printRawDataMulti(
-  ip: string,
+  printerName: string,
   base64String: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.printRawDataMulti(ip, base64String);
+    return SavanitdevThermalPrinter.printRawDataMulti(
+      printerName,
+      base64String
+    );
   } else {
     // IP must required for IOS
   }
@@ -547,3 +547,41 @@ export function printImgWithTimeout(
     timeout
   );
 }
+export async function getPrinterInfoList(): Promise<string> {
+  if (Platform.OS === "android") {
+    return await SavanitdevThermalPrinter.getPrinterInfoList();
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
+export async function GetPrinterStatusMulti(
+  printerName: string
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return await SavanitdevThermalPrinter.GetPrinterStatus(printerName);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
+export async function removeMulti(printerName: string): Promise<string> {
+  if (Platform.OS === "android") {
+    return await SavanitdevThermalPrinter.removeMulti(printerName);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
+export const startPrinterDiscovery = async (timeout = 5000) => {
+  try {
+    const printers = await SavanitdevThermalPrinter.startQuickDiscovery(
+      timeout
+    );
+    console.log("Discovered printers: ", printers);
+    return printers;
+  } catch (error) {
+    console.error("Printer discovery failed: ", error);
+    return [];
+  }
+};
