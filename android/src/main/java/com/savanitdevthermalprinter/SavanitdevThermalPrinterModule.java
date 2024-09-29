@@ -4,6 +4,7 @@ import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Context.BIND_AUTO_CREATE;
 
 import static zywell.posprinter.utils.StringUtils.byteMerger;
+import static zywell.posprinter.utils.StringUtils.strTobytes;
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
@@ -115,8 +116,8 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             Intent intent = new Intent(context, PosprinterService.class);
             context.bindService(intent, mSerconnection, BIND_AUTO_CREATE);
             POSConnect.init(reactContext);
-        } catch (Exception exe) {
-            Log.d("myBinder ERROR", "Exception--: " + exe);
+        } catch (Exception e) {
+            Log.d("myBinder ERROR", "Exception--: " + e);
         }
     }
 
@@ -131,13 +132,13 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         try {
             Intent intent = new Intent(context, PosprinterService.class);
             context.bindService(intent, mSerconnection, BIND_AUTO_CREATE);
-        } catch (Exception exe) {
-            Log.d("TAG", "Exception--: " + exe);
-            promise.reject("ERROR", exe.toString());
+        } catch (Exception e) {
+            Log.d("TAG", "Exception--: " + e);
+            promise.reject("ERROR", e.toString());
         }
     }
-    // Xprinter
 
+    // Xprinter
     @ReactMethod
     public void printRawDataX(int index, String encode, Promise promise) {
         try {
@@ -179,10 +180,8 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public void connectBTX(String ip, int index, Promise promise) {
         try {
             Log.d("TAG", "DEVICE_TYPE_BLUETOOTH: ");
-
             connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_BLUETOOTH);
             connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
-
         } catch (Exception e) {
             e.printStackTrace();
             promise.reject("ERROR", e.toString());
@@ -235,7 +234,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 });
             }
         } else {
-            Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+            // Log.d("TAG", "CONNECT_INTERRUPT: " + code);
             promise.reject("ERROR", "CONNECT_INTERRUPT");
         }
     }
@@ -249,23 +248,25 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 });
             }
         } else {
-            Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+            // Log.d("TAG", "CONNECT_INTERRUPT: " + code);
             connections[index].close();
             promise.reject("ERROR", "CONNECT_INTERRUPT");
         }
     }
 
     // Xprinter
-
     @ReactMethod
     public void startQuickDiscovery(int timeout, Promise promise) {
         new Thread() {
             public void run() {
                 DatagramSocket socket = null;
                 try {
+                    if (socket != null && !socket.isClosed()) {
+                        socket.close();
+                    }
                     // Prepare the UDP socket
                     socket = new DatagramSocket(5001);
-                    socket.setSoTimeout(timeout); // 1-second timeout for quick discovery
+                    socket.setSoTimeout(timeout); // 15-second timeout
                     byte[] sendData = "ZY0001FIND".getBytes();
 
                     // Send broadcast UDP packet
@@ -277,41 +278,29 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     byte[] receiveData = new byte[1024];
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 
+                    // Listen for response from printers
                     WritableArray printersArray = Arguments.createArray();
-                    boolean printerFound = false;
-
-                    // Perform multiple quick checks (e.g., 5 tries of 1 second each)
-                    for (int i = 0; i < 5; i++) {
+                    boolean listening = true;
+                    while (listening) {
                         try {
-                            socket.receive(receivePacket); // Listen for response
+                            socket.receive(receivePacket); // Block until data is received or timeout
                             String receivedString = new String(receivePacket.getData(), 0, receivePacket.getLength());
                             WritableMap printerInfo = Arguments.createMap();
                             printerInfo.putString("ipAddress", receivePacket.getAddress().toString());
                             printerInfo.putString("message", receivedString);
                             printersArray.pushMap(printerInfo);
-
-                            // Exit early if a printer is found
-                            printerFound = true;
-                            break;
-
                         } catch (SocketTimeoutException e) {
-                            // Timeout for this iteration, continue to next
+                            listening = false; // Timeout occurred, stop listening
                         } catch (IOException e) {
                             Log.e("PrinterDiscovery", "Error receiving packet", e);
                             promise.reject("IO_EXCEPTION", e);
-                            return;
                         }
                     }
 
-                    // If a printer was found, resolve with the list
-                    if (printerFound) {
-                        Handler handler = new Handler(Looper.getMainLooper());
-                        final WritableArray finalPrintersArray = printersArray;
-                        handler.post(() -> promise.resolve(finalPrintersArray));
-                    } else {
-                        // No printer found, return empty array
-                        promise.resolve(printersArray);
-                    }
+                    // Return results to JS
+                    Handler handler = new Handler(Looper.getMainLooper());
+                    final WritableArray finalPrintersArray = printersArray;
+                    handler.post(() -> promise.resolve(finalPrintersArray));
 
                 } catch (IOException e) {
                     Log.e("PrinterDiscovery", "Error sending packet", e);
@@ -326,7 +315,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     }
 
     private void AddPrinter(PosPrinterDev.PrinterInfo printer, Promise promise) {
-
         myBinder.AddPrinter(printer, new TaskCallback() {
             @Override
             public void OnSucceed() {
@@ -455,10 +443,10 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     }
                 });
             } else {
-                promise.reject(new Exception("CONNECT_FAIL_IP_NULL"));
+                promise.reject(new Exception("PRINTER_NAME_FAIL"));
             }
         } else {
-            promise.reject(new Exception("CONNECT_BLE_FAIL_IP_NULL"));
+            promise.reject(new Exception("NO_PRINTER_NAME"));
         }
     }
 
@@ -466,7 +454,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public void printRawDataMulti(String printerName, String base64String, Promise promise) {
         if (printerName != null) {
             boolean isValidate = findPrinterByName(printerName);
-            Log.e("isValidate", String.valueOf(isValidate));
+            // Log.e("isValidate", String.valueOf(isValidate));
             if (isValidate) {
                 byte[] bytes = Base64.decode(base64String, Base64.DEFAULT);
                 myBinder.SendDataToPrinter(printerName, new TaskCallback() {
@@ -488,10 +476,10 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     }
                 });
             } else {
-                promise.reject(new Exception("CONNECT_FAIL_IP_NULL"));
+                promise.reject(new Exception("PRINTER_NAME_FAIL"));
             }
         } else {
-            promise.reject(new Exception("CONNECT_FAIL"));
+            promise.reject(new Exception("NO_PRINTER_NAME"));
         }
     }
 
@@ -546,12 +534,12 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             myBinder.WriteSendData(new TaskCallback() {
                 @Override
                 public void OnSucceed() {
-                    promise.resolve("print done");
+                    promise.resolve("PRINT_DONE");
                 }
 
                 @Override
                 public void OnFailed() {
-                    promise.reject("ERROR", "OnFailed printImg");
+                    promise.reject("ERROR", "PRINT_FAIL");
                     // disConnectNet(promise);
                 }
             }, new ProcessData() {
@@ -564,7 +552,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 }
             });
         } else {
-            promise.reject("0", "please connect device first!");
+            promise.reject("ERROR", "PLEASE CONNECT DEVICE FIRST!");
         }
     }
 
@@ -593,7 +581,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
                 @Override
                 public void OnFailed() {
-                    promise.reject("ERROR", "OnFailed printImg");
+                    promise.reject("ERROR", "PRINT_FAIL");
                     // disConnectNet(promise);
                 }
             }, new ProcessData() {
@@ -634,43 +622,42 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 }
             });
         } else {
-            promise.reject("0", "please connect device first!");
+            promise.reject("ERROR", "PLEASE CONNECT DEVICE FIRST!");
         }
     }
 
-    // @ReactMethod
-    // public void StopMonitorPrinter(Promise promise) {
-    // if (ISCONNECT == true) {
-    // myBinder.StopMonitorPrinter();
-    // promise.resolve("SUCCESS");
-    // } else {
-    // promise.reject(new Exception("GetPrinterStatus Fail"));
-    // ISCONNECT = false;
-    // }
-    // }
-    //
-    // @ReactMethod
-    // public void GetPrinterStatus(Promise promise) {
-    // if (ISCONNECT == true) {
-    //
-    // String status = myBinder.GetPrinterStatus().toString();
-    // promise.resolve(status);
-    // } else {
-    // promise.reject(new Exception("GetPrinterStatus Fail"));
-    // ISCONNECT = false;
-    // }
-    // }
-    //
-    // @ReactMethod
-    // public void GetPrinterStatusMulti(String printerName, Promise promise) {
-    // if (ISCONNECT == true) {
-    // String status = String.valueOf(myBinder.GetPrinterStatus(printerName));
-    // promise.resolve(status);
-    // } else {
-    // promise.reject(new Exception("GetPrinterStatus Fail"));
-    // ISCONNECT = false;
-    // }
-    // }
+    @ReactMethod
+    public void StopMonitorPrinter(Promise promise) {
+        if (ISCONNECT == true) {
+            myBinder.StopMonitorPrinter();
+            promise.resolve("SUCCESS");
+        } else {
+            promise.reject(new Exception("FAIL"));
+            ISCONNECT = false;
+        }
+    }
+
+    @ReactMethod
+    public void GetPrinterStatus(Promise promise) {
+        if (ISCONNECT == true) {
+            String status = myBinder.GetPrinterStatus().toString();
+            promise.resolve(status);
+        } else {
+            promise.reject(new Exception("FAIL"));
+            ISCONNECT = false;
+        }
+    }
+
+    @ReactMethod
+    public void GetPrinterStatusMulti(String printerName, Promise promise) {
+        if (ISCONNECT == true) {
+            String status = String.valueOf(myBinder.GetPrinterStatus(printerName));
+            promise.resolve(status);
+        } else {
+            promise.reject(new Exception("FAIL"));
+            ISCONNECT = false;
+        }
+    }
 
     @ReactMethod
     public void ClearBuffer(Promise promise) {
@@ -678,7 +665,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             myBinder.ClearBuffer();
             promise.resolve("true");
         } else {
-            promise.reject(new Exception("ClearBuffer_FAIL"));
+            promise.reject(new Exception("FAIL"));
             ISCONNECT = false;
         }
     }
@@ -693,7 +680,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             promise.resolve(result);
         } else {
             // The queue is empty
-            promise.resolve(null);
+            promise.reject(new Exception("FAIL"));
         }
     }
 
@@ -751,7 +738,6 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     // function single connection
     @ReactMethod
     private void printLangPrinter(Promise promise) {
-
         if (ISCONNECT) {
             sendDataToPrinter(new byte[] { 27, 64, 28, 46, 27, 33, 0, -123, -122, -121, -120, -119, -118, -117, -116,
                     -115, -114, -113, -112, -111, -110, -109, -108, -107, -106, -105, -104, -103, -102, -101, -100, -99,
@@ -761,22 +747,21 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     -38, -37, -36, -35, -34, -33, -32, -31, -30, -29, -28, -27, -26, -25, -24, -23, -22, -21, -20, -19,
                     -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 0, 0, 0, 0, 10,
                     27, 64, 29, 86, 65, 72, 28, 38, 0 });
-            promise.resolve("done");
+            promise.resolve("DONE");
         } else {
-            promise.reject("", "please connect printer!");
+            promise.reject("ERROR", "PLEASE CONNECT DEVICE FIRST!");
         }
     }
 
     @ReactMethod
     private void setLang(String codepage, Promise promise) {
-
         if (ISCONNECT) {
             byte codepageByte = Byte.parseByte(codepage);
             sendDataToPrinter(
                     byteMerger(new byte[] { 31, 27, 31, -1 }, new byte[] { (byte) codepageByte, 10, 0 }));
-            promise.resolve("done");
+            promise.resolve("DONE");
         } else {
-            promise.reject("", "please connect printer!");
+            promise.reject("ERROR", "PLEASE CONNECT DEVICE FIRST!");
         }
     }
 
@@ -796,11 +781,9 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     private void printBitmapBLE(String base64String, int w1, int w2, int isBLE, Promise promise) {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (!bluetoothAdapter.isEnabled()) {
-            promise.reject("turnoff");
-
+            promise.reject("BT_OFF");
         } else {
             final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), w1);
-
             if (ISCONNECT) {
                 myBinder.WriteSendData(new TaskCallback() {
                     @Override
@@ -837,9 +820,8 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     }
                 });
             } else {
-                promise.reject("", "OnFailed print img");
                 disConnectBT(promise);
-
+                promise.reject("ERROR", "PRINT_FAIL");
             }
         }
     }
@@ -848,28 +830,28 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     private void connectBT(String macAddress, Promise promise) {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (!bluetoothAdapter.isEnabled()) {
-            promise.reject("turnoff");
+            promise.reject("BT_OFF");
 
         } else {
             if (macAddress.equals(null) || macAddress.equals("")) {
-                promise.reject("Error connect BTE");
+                promise.reject("ERROR", "CONNECT_FAIL");
             } else {
                 if (ISCONNECT == true && address == macAddress) {
-                    promise.resolve("connect BTE success");
+                    promise.resolve("CONNECTED");
                 } else {
                     myBinder.ConnectBtPort(macAddress, new TaskCallback() {
                         @Override
                         public void OnSucceed() {
                             address = macAddress;
                             ISCONNECT = true;
-                            promise.resolve("connect BTE success");
+                            promise.resolve("CONNECTED");
                         }
 
                         @Override
                         public void OnFailed() {
                             address = "";
-                            disConnectBT(promise);
-                            promise.reject("Error connect BTE");
+                            // disConnectBT(promise);
+                            promise.reject("ERROR", "CONNECT_FAIL");
 
                         }
                     });
@@ -883,7 +865,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     private void disConnectBT(Promise promise) {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (!bluetoothAdapter.isEnabled()) {
-            promise.reject("turnoff");
+            promise.reject("BT_OFF");
 
         } else {
             myBinder.DisconnectCurrentPort(new TaskCallback() {
@@ -891,13 +873,13 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 public void OnSucceed() {
                     address = "";
                     ISCONNECT = false;
-                    promise.resolve("disconnect");
+                    promise.resolve("DISCONNECT");
                 }
 
                 @Override
                 public void OnFailed() {
                     ISCONNECT = true;
-                    promise.reject("0", "OnFailed disConnectBT");
+                    promise.reject("ERROR", "DISCONNECT_FAIL");
                 }
             });
 
@@ -910,12 +892,12 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         myBinder.Write(bytes, new TaskCallback() {
             @Override
             public void OnSucceed() {
-                promise.resolve("success print raw");
+                promise.resolve("PRINT_DONE");
             }
 
             @Override
             public void OnFailed() {
-                promise.reject("error print raw");
+                promise.reject("ERROR", "PRINT_FAIL");
             }
         });
     }
@@ -926,7 +908,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         try {
             bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (!bluetoothAdapter.isEnabled()) {
-                promise.reject("turnoff");
+                promise.reject("BT_OFF");
 
             } else {
 
@@ -955,7 +937,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             }
         } catch (Exception exe) {
             Log.d("TAG", "Exception--: " + exe);
-            promise.reject(exe);
+            promise.reject("ERROR", exe.toString());
         }
     }
 
@@ -1063,12 +1045,12 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             myBinder.WriteSendData(new TaskCallback() {
                 @Override
                 public void OnSucceed() {
-                    promise.resolve("print done");
+                    promise.resolve("PRINT_DONE");
                 }
 
                 @Override
                 public void OnFailed() {
-                    promise.reject("ERROR", "OnFailed printImg");
+                    promise.reject("ERROR", "PRINT_FAIL");
                     // disConnectNet(promise);
                 }
             }, new ProcessData() {
@@ -1107,7 +1089,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     @Override
                     public void OnFailed() {
                         ISCONNECT = true;
-                        promise.reject(Boolean.toString(true));
+                        promise.reject("ERROR", "DISCONNECT");
                     }
                 });
             } else {
@@ -1115,19 +1097,19 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     @Override
                     public void OnSucceed() {
                         ISCONNECT = true;
-                        promise.resolve(Boolean.toString(true));
+                        promise.resolve("CONNECTED");
                     }
 
                     @Override
                     public void OnFailed() {
                         ISCONNECT = false;
-                        promise.reject(Boolean.toString(false));
+                        promise.reject("ERROR", "DISCONNECT");
 
                     }
                 });
             }
         } else {
-            promise.reject(Boolean.toString(false));
+            promise.reject("ERROR", "NO_ADDRESS");
         }
     }
 
@@ -1143,7 +1125,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             promise.resolve(usblist.toString());
         } catch (Exception exe) {
             Log.d("TAG", "Exception--: " + exe);
-            promise.reject("get USB error");
+            promise.reject("ERROR", exe.toString());
         }
     }
 
@@ -1166,7 +1148,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             });
 
         } else {
-            promise.reject("No usbAddress");
+            promise.reject("ERROR", "NO_ADDRESS");
         }
     }
 
@@ -1178,13 +1160,13 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 public void OnSucceed() {
 
                     // disConnectNet();
-                    promise.resolve("Done");
+                    promise.resolve("PRINT_DONE");
                 }
 
                 @Override
                 public void OnFailed() {
 
-                    promise.reject("error", "printText fail!");
+                    promise.reject("ERROR", "PRINT_FAIL");
                     // disConnectNet();
 
                 }
@@ -1195,7 +1177,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 }
             });
         } else {
-            promise.reject("error", "print ISCONNECT  false");
+            promise.reject("ERROR", "DISCONNECT");
             // disConnectNet();
         }
     }
@@ -1254,7 +1236,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
             promise.resolve(writableArray);
         } catch (Exception e) {
-            promise.reject("Error", e);
+            promise.reject("ERROR", e.toString());
         }
     }
 
@@ -1262,7 +1244,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public void clearPaper(Promise promise) {
         setPrinter.clear();
         if (setPrinter.size() == 0) {
-            promise.resolve("0");
+            promise.resolve("CLEAR_DONE");
         }
     }
 
@@ -1341,47 +1323,47 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void line(int length) {
-        // String line = new String(new char[length]).replace("\0", ".");
-        // // Convert the string to bytes using the existing method
-        // byte[] lineBytes = strTobytes(line);
-        // // Add a carriage return and line feed to move to the next line
-        // byte[] newline = new byte[] { 13, 10 }; // CR LF
-        // // Combine the line bytes with the newline bytes
-        // byte[] data = byteMerger(lineBytes, newline);
-        //
-        // setPrinter.add(data);
+        String line = new String(new char[length]).replace("\0", ".");
+        // Convert the string to bytes using the existing method
+        byte[] lineBytes = strTobytes(line);
+        // Add a carriage return and line feed to move to the next line
+        byte[] newline = new byte[] { 13, 10 }; // CR LF
+        // Combine the line bytes with the newline bytes
+        byte[] data = byteMerger(lineBytes, newline);
+
+        setPrinter.add(data);
     }
 
     @ReactMethod
     public void line2(int length) {
-        // String line = new String(new char[length]).replace("\0", "-");
-        //
-        // // Convert the string to bytes using the existing method
-        // byte[] lineBytes = strTobytes(line);
-        //
-        // // Add a carriage return and line feed to move to the next line
-        // byte[] newline = new byte[] { 13, 10 }; // CR LF
-        //
-        // // Combine the line bytes with the newline bytes
-        // byte[] data = byteMerger(lineBytes, newline);
-        //
-        // setPrinter.add(data);
+        String line = new String(new char[length]).replace("\0", "-");
+
+        // Convert the string to bytes using the existing method
+        byte[] lineBytes = strTobytes(line);
+
+        // Add a carriage return and line feed to move to the next line
+        byte[] newline = new byte[] { 13, 10 }; // CR LF
+
+        // Combine the line bytes with the newline bytes
+        byte[] data = byteMerger(lineBytes, newline);
+
+        setPrinter.add(data);
     }
 
     @ReactMethod
     public void line3(int length) {
         String line = new String(new char[length]).replace("\0", "=");
 
-        // // Convert the string to bytes using the existing method
-        // byte[] lineBytes = strTobytes(line);
-        //
-        // // Add a carriage return and line feed to move to the next line
-        // byte[] newline = new byte[] { 13, 10 }; // CR LF
-        //
-        // // Combine the line bytes with the newline bytes
-        // byte[] data = byteMerger(lineBytes, newline);
-        //
-        // setPrinter.add(data);
+        // Convert the string to bytes using the existing method
+        byte[] lineBytes = strTobytes(line);
+
+        // Add a carriage return and line feed to move to the next line
+        byte[] newline = new byte[] { 13, 10 }; // CR LF
+
+        // Combine the line bytes with the newline bytes
+        byte[] data = byteMerger(lineBytes, newline);
+
+        setPrinter.add(data);
     }
 
 }

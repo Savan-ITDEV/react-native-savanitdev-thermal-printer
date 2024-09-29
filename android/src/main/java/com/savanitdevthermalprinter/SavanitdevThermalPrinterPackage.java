@@ -17,6 +17,8 @@ public class SavanitdevThermalPrinterPackage implements ReactPackage {
   public List<NativeModule> createNativeModules(@NonNull ReactApplicationContext reactContext) {
     List<NativeModule> modules = new ArrayList<>();
     modules.add(new SavanitdevThermalPrinterModule(reactContext));
+    modules.add(new ZyWell(reactContext));
+    modules.add(new Xprinter(reactContext));
     return modules;
   }
 
