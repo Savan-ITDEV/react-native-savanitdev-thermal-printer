@@ -3,7 +3,8 @@ package com.savanitdevthermalprinter;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Context.BIND_AUTO_CREATE;
 
-import android.Manifest;
+import static zywell.posprinter.utils.StringUtils.byteMerger;
+
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
@@ -14,7 +15,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.usb.UsbDevice;
@@ -25,7 +25,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
@@ -34,43 +33,19 @@ import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.bridge.WritableNativeArray;
-import com.facebook.react.bridge.WritableNativeMap;
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
-import androidx.core.app.ActivityCompat;
 
-import com.facebook.react.bridge.Callback;
+import androidx.annotation.NonNull;
+
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.module.annotations.ReactModule;
 
-import net.posprinter.posprinterface.IMyBinder;
-import net.posprinter.posprinterface.PrinterBinder;
-import net.posprinter.posprinterface.ProcessData;
-import net.posprinter.posprinterface.TaskCallback;
-import net.posprinter.service.PosprinterService;
-import net.posprinter.service.PrinterConnectionsService;
-import net.posprinter.utils.BitmapProcess;
-import net.posprinter.utils.BitmapToByteData;
-import net.posprinter.utils.DataForSendToPrinterPos58;
-import net.posprinter.utils.DataForSendToPrinterPos80;
-import net.posprinter.utils.DataForSendToPrinterPos76;
-import net.posprinter.utils.DataForSendToPrinterTSC;
-import net.posprinter.utils.PosPrinterDev;
-import net.posprinter.utils.RoundQueue;
-import net.posprinter.utils.StringUtils;
-
-import static net.posprinter.utils.StringUtils.byteMerger;
-import static net.posprinter.utils.StringUtils.strTobytes;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -78,6 +53,24 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import zywell.posprinter.posprinterface.IMyBinder;
+import zywell.posprinter.posprinterface.ProcessData;
+import zywell.posprinter.posprinterface.TaskCallback;
+import zywell.posprinter.service.PosprinterService;
+import zywell.posprinter.utils.BitmapProcess;
+import zywell.posprinter.utils.BitmapToByteData;
+import zywell.posprinter.utils.DataForSendToPrinterPos58;
+import zywell.posprinter.utils.DataForSendToPrinterPos80;
+import zywell.posprinter.utils.PosPrinterDev;
+import zywell.posprinter.utils.RoundQueue;
+
+import net.posprinter.IDeviceConnection;
+import net.posprinter.POSConnect;
+import net.posprinter.POSPrinter;
+import net.posprinter.ZPLPrinter;
 
 @ReactModule(name = SavanitdevThermalPrinterModule.NAME)
 public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
@@ -91,16 +84,18 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public static String address = "";
     UsbManager mUsbManager;
     protected String[] mDataset;
-    private static int DATASET_COUNT = 20;
+
+    private IDeviceConnection[] connections = new IDeviceConnection[99];
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     Context context;
+
     ServiceConnection mSerconnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             myBinder = (IMyBinder) service;
             Log.e("myBinder", "connect");
-//            Toast toast = Toast.makeText(context, "connect", Toast.LENGTH_SHORT);
-//            toast.show();
+            // Toast toast = Toast.makeText(context, "connect", Toast.LENGTH_SHORT);
+            // toast.show();
         }
 
         @Override
@@ -116,11 +111,12 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         super(reactContext);
         context = reactContext;
         try {
+            Log.e("myBinder", "initial printer");
             Intent intent = new Intent(context, PosprinterService.class);
             context.bindService(intent, mSerconnection, BIND_AUTO_CREATE);
+            POSConnect.init(reactContext);
         } catch (Exception exe) {
-            Log.d("TAG", "Exception--: " + exe);
-
+            Log.d("myBinder ERROR", "Exception--: " + exe);
         }
     }
 
@@ -140,6 +136,127 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             promise.reject("ERROR", exe.toString());
         }
     }
+    // Xprinter
+
+    @ReactMethod
+    public void printRawDataX(int index, String encode, Promise promise) {
+        try {
+            POSPrinter printer = new POSPrinter(connections[index]);
+            byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+            printer.sendData(bytes).feedLine();
+            promise.resolve("SUCCESS");
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectNetX(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_ETHERNET: ");
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_ETHERNET);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectUSBX(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_USB: ");
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_USB);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectBTX(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_BLUETOOTH: ");
+
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_BLUETOOTH);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void connectSERIAL(String ip, int index, Promise promise) {
+        try {
+            Log.d("TAG", "DEVICE_TYPE_SERIAL: ");
+            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_SERIAL);
+            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void disConnectX(String ip, int index, Promise promise) {
+        try {
+            connections[index].close();
+            promise.resolve("DISCONNECT");
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void printRawDataZPL(String ip, int index, String encode, Promise promise) {
+        try {
+            ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+            printer.sendData(bytes).addEnd();
+            promise.resolve("SUCCESS");
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    private void connectList(int code, Promise promise) {
+        if (code == POSConnect.CONNECT_SUCCESS) {
+            Log.d("TAG", "CONNECT_SUCCESS: ");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {
+                    promise.resolve("CONNECTED");
+                });
+            }
+        } else {
+            Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+            promise.reject("ERROR", "CONNECT_INTERRUPT");
+        }
+    }
+
+    private void connectListener(int index, int code, Promise promise) {
+        if (code == POSConnect.CONNECT_SUCCESS) {
+            Log.d("ALERT", "CONNECT_SUCCESS: ");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {
+                    promise.resolve("CONNECTED");
+                });
+            }
+        } else {
+            Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+            connections[index].close();
+            promise.reject("ERROR", "CONNECT_INTERRUPT");
+        }
+    }
+
+    // Xprinter
+
     @ReactMethod
     public void startQuickDiscovery(int timeout, Promise promise) {
         new Thread() {
@@ -208,13 +325,14 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }.start();
     }
 
-    private void AddPrinter(PosPrinterDev.PrinterInfo printer,Promise promise) {
+    private void AddPrinter(PosPrinterDev.PrinterInfo printer, Promise promise) {
+
         myBinder.AddPrinter(printer, new TaskCallback() {
             @Override
             public void OnSucceed() {
                 WritableMap result = Arguments.createMap();
-                result.putString("printerName",printer.printerName);
-                result.putString("portInfo",printer.portInfo);
+                result.putString("printerName", printer.printerName);
+                result.putString("portInfo", printer.portInfo);
                 result.putString("printerType", String.valueOf(printer.printerType));
                 result.putString("status", String.valueOf(printer.status));
                 promise.resolve(result);
@@ -222,23 +340,26 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
             @Override
             public void OnFailed() {
-                promise.reject("ERROR", "CONNECT_MULTI_FAIL");
+                promise.reject("ERROR", "CONNECT_FAIL");
             }
         });
     }
+
     @ReactMethod
     private void getPrinterInfoList(Promise promise) {
         try {
             String data = String.valueOf(myBinder.GetPrinterInfoList().toString());
             promise.resolve(data);
         } catch (Exception e) {
-            promise.reject("ERROR",e.toString());
+            promise.reject("ERROR", e.toString());
             throw new RuntimeException(e);
         }
     }
+
     @ReactMethod
     public void removeMulti(String printerName, Promise promise) {
         if (printerName != null) {
+
             boolean isValidate = findPrinterByName(printerName);
             Log.e("isValidate", String.valueOf(isValidate));
             if (isValidate) {
@@ -269,18 +390,18 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             switch (portType) {
                 case 0:
                     printer = new PosPrinterDev.PrinterInfo(name, PosPrinterDev.PortType.Ethernet, address);
-                    AddPrinter(printer,promise);
+                    AddPrinter(printer, promise);
                     break;
                 case 1:
                     String mac = address.toString().trim();
                     printer = new PosPrinterDev.PrinterInfo(name, PosPrinterDev.PortType.Bluetooth, mac);
-                    AddPrinter(printer,promise);
+                    AddPrinter(printer, promise);
                     break;
                 case 2:
                     String usbAddress = address.toString().trim();
                     printer = new PosPrinterDev.PrinterInfo(name, PosPrinterDev.PortType.USB, usbAddress);
                     printer.context = context;
-                    AddPrinter(printer,promise);
+                    AddPrinter(printer, promise);
                     break;
             }
 
@@ -288,22 +409,25 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             promise.reject(new Exception("CONNECT_ADDRESS_FAIL_NULL"));
         }
     }
+
     // Method to find a printer by its name
     public boolean findPrinterByName(String printerName) {
-        for(int i=0;i<myBinder.GetPrinterInfoList().size();i++){
-            Log.e("printerName",printerName);
-            Log.e("GET GetPrinterInfoList",myBinder.GetPrinterInfoList().get(i).printerName);
-            Log.e("GetPrinterInfoList ", String.valueOf(myBinder.GetPrinterInfoList().get(i).printerName.equals(printerName.toString())));
+        for (int i = 0; i < myBinder.GetPrinterInfoList().size(); i++) {
+            Log.e("printerName", printerName);
+            Log.e("GET GetPrinterInfoList", myBinder.GetPrinterInfoList().get(i).printerName);
+            Log.e("GetPrinterInfoList ",
+                    String.valueOf(myBinder.GetPrinterInfoList().get(i).printerName.equals(printerName.toString())));
             if (myBinder.GetPrinterInfoList().get(i).printerName.equals(printerName.toString())) {
                 return true;
             }
         }
         return false;
     }
+
     @ReactMethod
     public void printImgMulti(String printerName, String base64String, int width, Promise promise) {
         if (printerName != null) {
-            boolean isValidate= findPrinterByName(printerName);
+            boolean isValidate = findPrinterByName(printerName);
             if (isValidate) {
                 final Bitmap bitmap = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
                 myBinder.SendDataToPrinter(printerName, new TaskCallback() {
@@ -383,7 +507,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void printPicMulti(String address, String imagePath,
-                              final ReadableMap options, final Promise promise) {
+            final ReadableMap options, final Promise promise) {
         Uri imageUri = Uri.parse(imagePath);
         String realPath = imageUri.getPath();
 
@@ -446,7 +570,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     private void printImgWithTimeout(String base64String, int size, boolean isCutPaper, int width, int cutCount,
-                                     int timeout, Promise promise) {
+            int timeout, Promise promise) {
 
         if (ISCONNECT) {
             final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
@@ -514,39 +638,39 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }
     }
 
-    @ReactMethod
-    public void StopMonitorPrinter(Promise promise) {
-        if (ISCONNECT == true) {
-            myBinder.StopMonitorPrinter();
-            promise.resolve("SUCCESS");
-        } else {
-            promise.reject(new Exception("GetPrinterStatus Fail"));
-            ISCONNECT = false;
-        }
-    }
-
-    @ReactMethod
-    public void GetPrinterStatus(Promise promise) {
-        if (ISCONNECT == true) {
-
-            String status = myBinder.GetPrinterStatus().toString();
-            promise.resolve(status);
-        } else {
-            promise.reject(new Exception("GetPrinterStatus Fail"));
-            ISCONNECT = false;
-        }
-    }
-
-    @ReactMethod
-    public void GetPrinterStatusMulti(String printerName,Promise promise) {
-        if (ISCONNECT == true) {
-            String status = String.valueOf(myBinder.GetPrinterStatus(printerName));
-            promise.resolve(status);
-        } else {
-            promise.reject(new Exception("GetPrinterStatus Fail"));
-            ISCONNECT = false;
-        }
-    }
+    // @ReactMethod
+    // public void StopMonitorPrinter(Promise promise) {
+    // if (ISCONNECT == true) {
+    // myBinder.StopMonitorPrinter();
+    // promise.resolve("SUCCESS");
+    // } else {
+    // promise.reject(new Exception("GetPrinterStatus Fail"));
+    // ISCONNECT = false;
+    // }
+    // }
+    //
+    // @ReactMethod
+    // public void GetPrinterStatus(Promise promise) {
+    // if (ISCONNECT == true) {
+    //
+    // String status = myBinder.GetPrinterStatus().toString();
+    // promise.resolve(status);
+    // } else {
+    // promise.reject(new Exception("GetPrinterStatus Fail"));
+    // ISCONNECT = false;
+    // }
+    // }
+    //
+    // @ReactMethod
+    // public void GetPrinterStatusMulti(String printerName, Promise promise) {
+    // if (ISCONNECT == true) {
+    // String status = String.valueOf(myBinder.GetPrinterStatus(printerName));
+    // promise.resolve(status);
+    // } else {
+    // promise.reject(new Exception("GetPrinterStatus Fail"));
+    // ISCONNECT = false;
+    // }
+    // }
 
     @ReactMethod
     public void ClearBuffer(Promise promise) {
@@ -649,7 +773,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         if (ISCONNECT) {
             byte codepageByte = Byte.parseByte(codepage);
             sendDataToPrinter(
-                    StringUtils.byteMerger(new byte[] { 31, 27, 31, -1 }, new byte[] { (byte) codepageByte, 10, 0 }));
+                    byteMerger(new byte[] { 31, 27, 31, -1 }, new byte[] { (byte) codepageByte, 10, 0 }));
             promise.resolve("done");
         } else {
             promise.reject("", "please connect printer!");
@@ -979,6 +1103,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                         connectNet(ip, promise);
                         // promise.resolve(Boolean.toString(ISCONNECT));
                     }
+
                     @Override
                     public void OnFailed() {
                         ISCONNECT = true;
@@ -992,6 +1117,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                         ISCONNECT = true;
                         promise.resolve(Boolean.toString(true));
                     }
+
                     @Override
                     public void OnFailed() {
                         ISCONNECT = false;
@@ -1174,7 +1300,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void text(String text, String charset) {
-        setPrinter.add(StringUtils.strTobytes(text, charset));
+        // setPrinter.add(strTobytes(text, charset));
     }
 
     @ReactMethod
@@ -1215,47 +1341,47 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void line(int length) {
-        String line = new String(new char[length]).replace("\0", ".");
-        // Convert the string to bytes using the existing method
-        byte[] lineBytes = strTobytes(line);
-        // Add a carriage return and line feed to move to the next line
-        byte[] newline = new byte[] { 13, 10 }; // CR LF
-        // Combine the line bytes with the newline bytes
-        byte[] data = byteMerger(lineBytes, newline);
-
-        setPrinter.add(data);
+        // String line = new String(new char[length]).replace("\0", ".");
+        // // Convert the string to bytes using the existing method
+        // byte[] lineBytes = strTobytes(line);
+        // // Add a carriage return and line feed to move to the next line
+        // byte[] newline = new byte[] { 13, 10 }; // CR LF
+        // // Combine the line bytes with the newline bytes
+        // byte[] data = byteMerger(lineBytes, newline);
+        //
+        // setPrinter.add(data);
     }
 
     @ReactMethod
     public void line2(int length) {
-        String line = new String(new char[length]).replace("\0", "-");
-
-        // Convert the string to bytes using the existing method
-        byte[] lineBytes = strTobytes(line);
-
-        // Add a carriage return and line feed to move to the next line
-        byte[] newline = new byte[] { 13, 10 }; // CR LF
-
-        // Combine the line bytes with the newline bytes
-        byte[] data = byteMerger(lineBytes, newline);
-
-        setPrinter.add(data);
+        // String line = new String(new char[length]).replace("\0", "-");
+        //
+        // // Convert the string to bytes using the existing method
+        // byte[] lineBytes = strTobytes(line);
+        //
+        // // Add a carriage return and line feed to move to the next line
+        // byte[] newline = new byte[] { 13, 10 }; // CR LF
+        //
+        // // Combine the line bytes with the newline bytes
+        // byte[] data = byteMerger(lineBytes, newline);
+        //
+        // setPrinter.add(data);
     }
 
     @ReactMethod
     public void line3(int length) {
         String line = new String(new char[length]).replace("\0", "=");
 
-        // Convert the string to bytes using the existing method
-        byte[] lineBytes = strTobytes(line);
-
-        // Add a carriage return and line feed to move to the next line
-        byte[] newline = new byte[] { 13, 10 }; // CR LF
-
-        // Combine the line bytes with the newline bytes
-        byte[] data = byteMerger(lineBytes, newline);
-
-        setPrinter.add(data);
+        // // Convert the string to bytes using the existing method
+        // byte[] lineBytes = strTobytes(line);
+        //
+        // // Add a carriage return and line feed to move to the next line
+        // byte[] newline = new byte[] { 13, 10 }; // CR LF
+        //
+        // // Combine the line bytes with the newline bytes
+        // byte[] data = byteMerger(lineBytes, newline);
+        //
+        // setPrinter.add(data);
     }
 
 }

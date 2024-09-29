@@ -1,14 +1,22 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-2:12
-INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-2:12
-INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-2:12
+ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-6:12
+INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-6:12
+INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-6:12
 	package
 		INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml
-		ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-2:12
+		ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:1-6:12
 		INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml
 	xmlns:android
 		ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:1:11-69
+uses-permission#android.permission.BLUETOOTH_CONNECT
+ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:3:5-76
+	android:name
+		ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:3:22-73
+uses-permission#android.permission.BLUETOOTH_SCAN
+ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:5:5-73
+	android:name
+		ADDED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml:5:22-70
 uses-sdk
 INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml reason: use-sdk injection requested
 INJECTED from /Users/phuthiyen/Desktop/freelance/ReactNative/Starter/node_modules/react-native-savanitdev-thermal-printer/android/src/main/AndroidManifestNew.xml

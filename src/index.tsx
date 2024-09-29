@@ -585,3 +585,25 @@ export const startPrinterDiscovery = async (timeout = 5000) => {
     return [];
   }
 };
+
+// Xprinter
+
+export async function printRawDataX(
+  index: number,
+  encode: string
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return await SavanitdevThermalPrinter.printRawDataX(index, encode);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
+export async function connectNetX(ip: string, index: number): Promise<string> {
+  if (Platform.OS === "android") {
+    return await SavanitdevThermalPrinter.connectNetX(ip, index);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
