@@ -28,7 +28,7 @@ public class NetworkUtils {
             promise.resolve(String.valueOf(timeTaken));
         } catch (IOException e) {
             System.out.println("Ping failed: " + e.getMessage());
-            promise.reject("ERROR", "Ping fail please check your device");
+            promise.reject("ERROR", "PING_FAIL");
         }
 
     }

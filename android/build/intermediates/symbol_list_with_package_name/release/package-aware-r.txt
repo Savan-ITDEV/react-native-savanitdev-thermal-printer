@@ -719,7 +719,6 @@ id accessibility_label
 id accessibility_links
 id accessibility_role
 id accessibility_state
-id accessibility_state_expanded
 id accessibility_value
 id action_bar
 id action_bar_activity_content

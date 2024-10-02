@@ -1,9 +1,8 @@
 package com.savanitdevthermalprinter;
 
-import static com.savanitdevthermalprinter.SavanitdevThermalPrinterModule.decodeBase64ToBitmap;
-
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
@@ -27,17 +26,19 @@ import net.posprinter.ZPLPrinter;
 import net.posprinter.model.AlgorithmType;
 import net.posprinter.posprinterface.IStatusCallback;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
-import zywell.posprinter.posprinterface.TaskCallback;
 
 @ReactModule(name = Xprinter.NAME)
 public class Xprinter extends ReactContextBaseJavaModule {
     public static final String NAME = "Xprinter";
     Context context;
     protected String[] mDataset;
-    private IDeviceConnection[] connections = new IDeviceConnection[99];
+    //    private IDeviceConnection[] connections = new IDeviceConnection[99];
+    // Using HashMap to store connections by IP address (or any string key)
+    private final Map<String, IDeviceConnection> connections = new HashMap<>();
 
     @NonNull
     @Override
@@ -48,84 +49,126 @@ public class Xprinter extends ReactContextBaseJavaModule {
     public Xprinter(ReactApplicationContext reactContext) {
         super(reactContext);
         context = reactContext;
+        POSConnect.init(reactContext);
     }
 
     @ReactMethod
-    public void connectNetX(String ip, int index, Promise promise) {
+    public void connectMultiXPrinter(String address, int portType, Promise promise) {
         try {
             Log.d("TAG", "DEVICE_TYPE_ETHERNET: ");
-            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_ETHERNET);
-            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
+            int type = 3;
+            if (portType == 1) {
+                type = POSConnect.DEVICE_TYPE_USB;
+            } else if (portType == 2) {
+                type = POSConnect.DEVICE_TYPE_BLUETOOTH;
+            } else if (portType == 4) {
+                type = POSConnect.DEVICE_TYPE_SERIAL;
+            } else {
+                type = POSConnect.DEVICE_TYPE_ETHERNET;
+            }
+
+            IDeviceConnection connected = connections.get(address);
+            if (connected != null && connected.isConnect()) {
+                Log.d("TAG", "connected: ");
+                promise.resolve("CONNECTED");
+            }else{
+                Log.d("TAG", "NEW connect: ");
+                removeConnection(address);
+                // Create the device connection and use the IP address as the key
+                IDeviceConnection connection = POSConnect.createDevice(type);
+                connections.put(address, connection);  // Store the connection with IP as key
+                // Attempt to connect the device and use a callback listener
+                connection.connect(address, (code, msg) -> connectListener(address, code, promise));
+         }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
     @ReactMethod
-    public void connectUSBX(String ip, int index, Promise promise) {
+    public void disConnectXPrinter(String address, Promise promise) {
         try {
-            Log.d("TAG", "DEVICE_TYPE_USB: ");
-            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_USB);
-            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void connectBTX(String ip, int index, Promise promise) {
-        try {
-            Log.d("TAG", "DEVICE_TYPE_BLUETOOTH: ");
-            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_BLUETOOTH);
-            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void connectSERIAL(String ip, int index, Promise promise) {
-        try {
-            Log.d("TAG", "DEVICE_TYPE_SERIAL: ");
-            connections[index] = POSConnect.createDevice(POSConnect.DEVICE_TYPE_SERIAL);
-            connections[index].connect(ip, (code, msg) -> connectListener(index, code, promise));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void disConnectX(int index, Promise promise) {
-        try {
-            if (connections[index].isConnect()) {
-                connections[index].close();
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                removeConnection(address);
                 promise.resolve("DISCONNECT");
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
+    public void removeConnection(String ip) {
+        // Check if the connection exists for the given IP
+        if (connections.containsKey(ip)) {
+            // Retrieve and close the connection before removing it
+            IDeviceConnection connection = connections.get(ip);
+            if (connection != null) {
+                connection.close();  // Close the connection safely
+            }
+
+            // Remove the connection from the map
+            connections.remove(ip);
+            Log.d("TAG", "Connection removed for IP: " + ip);
+        } else {
+            Log.d("TAG", "No connection found for IP: " + ip);
+        }
+    }
+
     @ReactMethod
-    public void printRawDataX(int index, String encode, Promise promise) {
+    public void printImgZPL(String address, String base64String, int width, int x, int y, Promise promise) {
         try {
-            Log.e("Log X ", String.valueOf(connections.equals(index)));
-            if (connections[index].isConnect()) {
-                POSPrinter printer = new POSPrinter(connections[index]);
-                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
-                printer.sendData(bytes).feedLine();
-                promise.resolve("SUCCESS");
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                    ZPLPrinter printer = new ZPLPrinter(connection);
+                    printer.addStart()
+                            .downloadBitmap(width, "SAMPLE.GRF", decodeBase64ToBitmap(base64String))
+                            .addBitmap(x, y, "SAMPLE.GRF")
+                            .addPrintCount(1)
+                            .addEnd();
+                    promise.resolve("SUCCESS");
+                } else {
+                    promise.reject("ERROR", "DISCONNECT");
+                }
+
             } else {
-                promise.reject("ERROR", "DISCONNECT");
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
+        } catch (Exception e) {
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    public  Bitmap decodeBase64ToBitmap(String base64String) {
+        byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
+        return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+    }
+
+    @ReactMethod
+    public void printImgTSPL(String address, String base64String, int width, int widthBmp, int height, int m, int n, int y,
+                             int x, Promise promise) {
+        try {
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                    TSPLPrinter printer = new TSPLPrinter(connection);
+                    Bitmap bmp = decodeBase64ToBitmap(base64String);
+                    printer.sizeMm(width, height)
+                            .gapMm(m, n)
+                            .cls()
+                            .bitmapCompression(x, y, TSPLConst.BMP_MODE_OVERWRITE_C, widthBmp, bmp, AlgorithmType.Threshold)
+                            .print(1);
+                    promise.resolve("SUCCESS");
+                } else {
+                    promise.reject("ERROR", "DISCONNECT");
+                }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
             promise.reject("ERROR", e.toString());
@@ -133,252 +176,272 @@ public class Xprinter extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void printImgZPL(int index, String base64String, int width, int x, int y, Promise promise) {
+    public void printImgCPCL(String address, String base64String, int width, int y, int x, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connections[index]);
-                printer.addStart()
-                        .downloadBitmap(width, "SAMPLE.GRF", decodeBase64ToBitmap(base64String))
-                        .addBitmap(x, y, "SAMPLE.GRF")
-                        .addPrintCount(1)
-                        .addEnd();
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void printImgTSPL(int index, String base64String, int width, int widthBmp, int height, int m, int n, int y,
-            int x, Promise promise) {
-        try {
-            if (connections[index].isConnect()) {
-                TSPLPrinter printer = new TSPLPrinter(connections[index]);
-                Bitmap bmp = decodeBase64ToBitmap(base64String);
-                printer.sizeMm(width, height)
-                        .gapMm(m, n)
-                        .cls()
-                        .bitmapCompression(x, y, TSPLConst.BMP_MODE_OVERWRITE_C, widthBmp, bmp, AlgorithmType.Threshold)
-                        .print(1);
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void printImgCPCL(int index, String base64String, int width, int y, int x, Promise promise) {
-        try {
-            if (connections[index].isConnect()) {
-                CPCLPrinter printer = new CPCLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                CPCLPrinter printer = new CPCLPrinter(connection);
                 Bitmap bmp = decodeBase64ToBitmap(base64String);
                 printer.addCGraphics(x, y, width, bmp, AlgorithmType.Threshold).addPrint();
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+
             promise.reject("ERROR", e.toString());
         }
     }
+    public void statusXprinter(POSPrinter printer, Promise promise) {
+        printer.printerStatus(new IStatusCallback() {
+            @Override
+            public void receive(int status) {
+                // Handle the received status here
+                String msg;
+                switch (status) {
+                    case 0:
+                        msg = "STS_NORMAL";
+                        break;
+                    case 8:
+                        msg = "STS_COVEROPEN";
+                        break;
+                    case 16:
+                        msg = "STS_PAPEREMPTY";
+                        break;
+                    case 32:
+                        msg = "STS_PRESS_FEED";
+                        break;
+                    case 64:
+                        promise.reject("ERROR", "STS_PRINTER_ERR");
+                        msg = "Printer error";
+                        break;
+                    default:
+                        Log.e("STATUS PRINT", String.valueOf(status));
+                        msg = "UNKNOWN";
+                        promise.reject("ERROR", "PRINT_FAIL");
+                        break;
+                }
 
+                promise.resolve(msg);
+                // You can now display the message
+            }});
+    }
     @ReactMethod
-    public void printImgESCX(int index, String base64String, int width, Promise promise) {
+    public void printRawDataESC(String address, String encode, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                POSPrinter printer = new POSPrinter(connections[index]);
-                Bitmap bmp = decodeBase64ToBitmap(base64String);
-                printer.printBitmap(bmp, POSConst.ALIGNMENT_CENTER, width).cutHalfAndFeed(1);
-                promise.resolve("SUCCESS");
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null && connection.isConnect()) {
+                POSPrinter printer = new POSPrinter(connection);
+                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+                printer.sendData(bytes);
+                statusXprinter(printer,promise);
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "DISCONNECT");
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
     @ReactMethod
-    public void printRawDataZPL(int index, String encode, Promise promise) {
+    public void printImgESCX(String address, String base64String, int width, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null && connection.isConnect()) {
+
+                        POSPrinter printer = new POSPrinter(connection);
+                        Bitmap bmp = decodeBase64ToBitmap(base64String);
+                        printer.printBitmap(bmp, POSConst.ALIGNMENT_CENTER, width);
+                        printer.cutHalfAndFeed(1);
+                        statusXprinter(printer,promise);
+
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
+            }
+        } catch (Exception e) {
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void printRawDataZPL(String address, String encode, Promise promise) {
+        try {
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                ZPLPrinter printer = new ZPLPrinter(connection);
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 printer.sendData(bytes).addEnd();
+
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+
             promise.reject("ERROR", e.toString());
         }
     }
     @ReactMethod
-    public void setPrintSpeed(int index, int speed, Promise promise) {
+    public void setPrintSpeed(String address, int speed, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                ZPLPrinter printer = new ZPLPrinter(connection);
                 printer.setPrintSpeed(speed);
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
     @ReactMethod
-    public void setPrintOrientation(int index, String orientation, Promise promise) {
+    public void setPrintOrientation(String address, String orientation, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                ZPLPrinter printer = new ZPLPrinter(connection);
                 printer.setPrintOrientation(orientation);
                 promise.resolve("SUCCESS");
             } else {
                 promise.reject("ERROR", "FAIL");
             }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
+            }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
     @ReactMethod
-    public void setPrintDensity(int index, int density, Promise promise) {
+    public void setPrintDensity(String address, int density, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                ZPLPrinter printer = new ZPLPrinter(connection);
                 printer.setPrintDensity(density);
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
     @ReactMethod
-    public void printerStatus(int index,int timeout, Promise promise) {
+    public void printerStatus(String address,int timeout, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                ZPLPrinter printer = new ZPLPrinter(connection);
                 printer.printerStatus(timeout, i -> promise.resolve(i));
             } else {
                 promise.reject("ERROR", "FAIL");
             }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
+            }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
     @ReactMethod
-    public void printRawDataCPCL(int index, String encode, Promise promise) {
+    public void printRawDataCPCL(String address, String encode, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                CPCLPrinter printer = new CPCLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                CPCLPrinter printer = new CPCLPrinter(connection);
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 printer.sendData(bytes).addPrint();
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
     @ReactMethod
-    public void printRawDataTSPL(int index, String encode, Promise promise) {
+    public void printRawDataTSPL(String address, String encode, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                TSPLPrinter printer = new TSPLPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                TSPLPrinter printer = new TSPLPrinter(connection);
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 printer.sendData(bytes).print();
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
-    @ReactMethod
-    public void printRawDataESC(int index, String encode, Promise promise) {
 
-        try {
-            if (connections[index].isConnect()) {
-                POSPrinter printer = new POSPrinter(connections[index]);
-                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
-                printer.sendData(bytes).feedLine();
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
 
     @ReactMethod
-    public void cutESCX(int index, Promise promise) {
+    public void cutESCX(String address, Promise promise) {
         try {
-            if (connections[index].isConnect()) {
-                POSPrinter printer = new POSPrinter(connections[index]);
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null) {
+                if (connection.isConnect()) {
+                POSPrinter printer = new POSPrinter(connection);
                 printer.cutHalfAndFeed(1);
                 promise.resolve("SUCCESS");
             } else {
-                promise.reject("ERROR", "DISCONNECT_FAIL");
+                promise.reject("ERROR", "DISCONNECT");
+            }
+            }else {
+                promise.reject("ERROR", "GET_ID_FAIL");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             promise.reject("ERROR", e.toString());
         }
     }
 
-    private void connectList(int code, Promise promise) {
-        if (code == POSConnect.CONNECT_SUCCESS) {
-            Log.d("TAG", "CONNECT_SUCCESS: ");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {
-                    promise.resolve("CONNECTED");
-                });
-            }
-        } else {
-            // Log.d("TAG", "CONNECT_INTERRUPT: " + code);
-            promise.reject("ERROR", "CONNECT_INTERRUPT");
-        }
-    }
+    private void connectListener(String address, int code, Promise promise) {
+        IDeviceConnection connection = connections.get(address);
+        if (connection != null && connection.isConnect()) {
 
-    private void connectListener(int index, int code, Promise promise) {
-        if (code == POSConnect.CONNECT_SUCCESS) {
-            Log.d("ALERT", "CONNECT_SUCCESS: ");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {
-                    promise.resolve("CONNECTED");
-                });
-            }
+                Log.d("ALERT", "CONNECT_SUCCESS: ");
+                promise.resolve("CONNECTED");
+
         } else {
-            // Log.d("TAG", "CONNECT_INTERRUPT: " + code);
-            connections[index].close();
-            promise.reject("ERROR", "CONNECT_INTERRUPT");
+                Log.d("TAG", "CONNECT_INTERRUPT: " + code);
+                // Reject the promise with an error
+                promise.reject("ERROR", "DISCONNECT");
+            }
         }
-    }
 
 }

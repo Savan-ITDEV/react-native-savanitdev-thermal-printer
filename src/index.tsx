@@ -46,16 +46,11 @@ const XPrinter = NativeModules.Xprinter
       }
     );
 
-export const PRINTER_TYPE = {
-  NET: "IP",
-  BLUETOOTH: "BLUETOOTH",
-};
-
 export function connectNet(ip: string): Promise<string> {
   if (Platform.OS === "android") {
-    return ZyWell.connectNet(ip);
+    return SavanitdevThermalPrinter.connectNet(ip);
   } else {
-    return ZyWell.connectNet(ip);
+    return SavanitdevThermalPrinter.connectNet(ip);
   }
 }
 
@@ -270,7 +265,24 @@ export function initialPrinter(): Promise<string> {
     return SavanitdevThermalPrinter.initBLE();
   }
 }
-
+export function initialZyWellPrinter(): Promise<string> {
+  if (Platform.OS === "android") {
+    console.log("====================================");
+    console.log("initialPrinter");
+    console.log("====================================");
+    return ZyWell.initialPrinter();
+  } else {
+  }
+}
+export function clearPrinter(): Promise<string> {
+  if (Platform.OS === "android") {
+    console.log("====================================");
+    console.log("clearPrinter");
+    console.log("====================================");
+    return ZyWell.closePrinter();
+  } else {
+  }
+}
 export function requestUSBPermission(): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.tryGetUsbPermission();
@@ -443,9 +455,9 @@ export const printPOS = {
   },
 };
 
-export function pingDevice(address: string): Promise<string> {
+export function pingDevice(address: string, timeout = 4000): Promise<string> {
   if (Platform.OS === "android") {
-    return SavanitdevThermalPrinter.pingDevice(address);
+    return SavanitdevThermalPrinter.pingDevice(address, timeout);
   } else {
     // return SavanitdevThermalPrinter.readBuffer(address);
   }
@@ -521,7 +533,7 @@ export function printImgZyWell(
   isCut: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return ZyWell.printRawZyWell(base64String, width, isCut);
+    return ZyWell.printImgZyWell(base64String, width, isCut);
   } else {
     // return ZyWell.connectUSBZyWell(ip);
   }
@@ -573,11 +585,23 @@ export async function disconnectMultiZyWell(
 
 export async function connectMultiZyWell(
   printerName: string,
-  portType = "NET"
+  portType = "ETHERNET"
 ): Promise<string> {
   if (Platform.OS === "android") {
-    const type = portType == "NET" ? 0 : portType == "BT" ? 1 : 2;
+    const type = portType == "ETHERNET" ? 0 : portType == "BLUETOOTH" ? 1 : 2;
     return await ZyWell.connectMultiZyWell(printerName, type);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
+
+export async function isOnline(
+  address: string,
+  timeout = 2000
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return await ZyWell.isOnline(address, timeout);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
@@ -606,9 +630,9 @@ export async function printRawDataMulti(
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
-export async function getPrinterListMultiZyWell(): Promise<string> {
+export async function getPrinterInfoListMulti(): Promise<string> {
   if (Platform.OS === "android") {
-    return await ZyWell.getPrinterInfoList();
+    return await ZyWell.getPrinterInfoListMulti();
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
@@ -618,7 +642,7 @@ export function printImgWithTimeoutMulti(
   printerName: string,
   base64String: string,
   page = 80,
-  isCut: number,
+  isCut = true,
   width: number,
   cutCount: number,
   timeout = 4000
@@ -628,7 +652,6 @@ export function printImgWithTimeoutMulti(
       printerName,
       base64String,
       page,
-      width,
       isCut,
       width,
       cutCount,
@@ -667,57 +690,41 @@ export function printImgTSCZyWell(
 // --------------- Lib XPrinter printer new function // ---------------
 
 // Xprinter
-export async function connectNetX(ip: string, index: number): Promise<string> {
-  if (Platform.OS === "android") {
-    return await XPrinter.connectNetX(ip, index);
-  } else {
-    // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
-  }
-}
-export function connectUSBX(address: string, index: number) {
-  return XPrinter.connectUSBX(address, index);
-}
-export function connectBTX(address: string, index: number) {
-  return XPrinter.connectBTX(address, index);
-}
-export function connectSERIAL(address: string, index: number) {
-  return XPrinter.connectSERIAL(address, index);
-}
-
-export function disConnectX(index: number) {
-  return XPrinter.disConnectX(index);
-}
-
-export async function printRawDataX(
-  index: number,
-  base64String: string
+export async function connectMultiXPrinter(
+  address: string,
+  portType: "ETHERNET"
 ): Promise<string> {
+  const type = portType == "ETHERNET" ? 3 : portType == "BLUETOOTH" ? 2 : 1;
   if (Platform.OS === "android") {
-    return await XPrinter.printRawDataX(index, base64String);
+    return await XPrinter.connectMultiXPrinter(address, type);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
+
+export function disConnectXPrinter(address: string) {
+  return XPrinter.disConnectXPrinter(address);
+}
+
 export async function printImgESCX(
-  index: number,
+  address: string,
   base64String: string,
   width: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printImgESCX(index, base64String, width);
+    return await XPrinter.printImgESCX(address, base64String, width);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printRawDataESC(
-  index: number,
+  address: string,
   base64String: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printRawDataESC(index, base64String);
+    return await XPrinter.printRawDataESC(address, base64String);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();

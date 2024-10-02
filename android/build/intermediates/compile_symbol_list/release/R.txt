@@ -718,7 +718,6 @@ int id accessibility_label 0x0
 int id accessibility_links 0x0
 int id accessibility_role 0x0
 int id accessibility_state 0x0
-int id accessibility_state_expanded 0x0
 int id accessibility_value 0x0
 int id action_bar 0x0
 int id action_bar_activity_content 0x0
