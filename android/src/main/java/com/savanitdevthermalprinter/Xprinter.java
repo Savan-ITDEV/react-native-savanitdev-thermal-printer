@@ -22,6 +22,7 @@ import net.posprinter.POSConst;
 import net.posprinter.POSPrinter;
 import net.posprinter.TSPLConst;
 import net.posprinter.TSPLPrinter;
+import net.posprinter.ZPLConst;
 import net.posprinter.ZPLPrinter;
 import net.posprinter.model.AlgorithmType;
 import net.posprinter.posprinterface.IStatusCallback;
@@ -50,6 +51,7 @@ public class Xprinter extends ReactContextBaseJavaModule {
         super(reactContext);
         context = reactContext;
         POSConnect.init(reactContext);
+        Log.e("Xprinter", "Start init");
     }
 
     @ReactMethod
@@ -118,17 +120,17 @@ public class Xprinter extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void printImgZPL(String address, String base64String, int width, int x, int y, Promise promise) {
+    public void printImgZPL(String address, String base64String, int width,int printCount, int x, int y, Promise promise) {
         try {
             IDeviceConnection connection = connections.get(address);
             if (connection != null) {
                 if (connection.isConnect()) {
                     ZPLPrinter printer = new ZPLPrinter(connection);
                     printer.addStart()
-                            .downloadBitmap(width, "SAMPLE.GRF", decodeBase64ToBitmap(base64String))
-                            .addBitmap(x, y, "SAMPLE.GRF")
-                            .addPrintCount(1)
-                            .addEnd();
+                             .downloadBitmap(width, "SAMPLE.GRF", decodeBase64ToBitmap(base64String))
+                             .addBitmap(x, y, "SAMPLE.GRF")
+                             .addPrintCount(printCount)
+                             .addEnd();
                     promise.resolve("SUCCESS");
                 } else {
                     promise.reject("ERROR", "DISCONNECT");
@@ -197,38 +199,49 @@ public class Xprinter extends ReactContextBaseJavaModule {
         }
     }
     public void statusXprinter(POSPrinter printer, Promise promise) {
-        printer.printerStatus(new IStatusCallback() {
-            @Override
-            public void receive(int status) {
-                // Handle the received status here
-                String msg;
-                switch (status) {
-                    case 0:
-                        msg = "STS_NORMAL";
-                        break;
-                    case 8:
-                        msg = "STS_COVEROPEN";
-                        break;
-                    case 16:
-                        msg = "STS_PAPEREMPTY";
-                        break;
-                    case 32:
-                        msg = "STS_PRESS_FEED";
-                        break;
-                    case 64:
-                        promise.reject("ERROR", "STS_PRINTER_ERR");
-                        msg = "Printer error";
-                        break;
-                    default:
-                        Log.e("STATUS PRINT", String.valueOf(status));
-                        msg = "UNKNOWN";
-                        promise.reject("ERROR", "PRINT_FAIL");
-                        break;
-                }
 
-                promise.resolve(msg);
-                // You can now display the message
-            }});
+        printer.printerStatus(status -> {
+            // Handle the received status here
+            String msg;
+            switch (status) {
+                case 0:
+                    msg = "STS_NORMAL";
+                    promise.resolve(msg);
+                    break;
+                case 8:
+                    msg = "STS_COVEROPEN";
+                    promise.resolve(msg);
+                    break;
+                case 16:
+                    msg = "STS_PAPEREMPTY";
+                    promise.resolve(msg);
+                    break;
+                case 32:
+                    msg = "STS_PRESS_FEED";
+                    promise.resolve(msg);
+                    break;
+                case 64:
+                    promise.reject("ERROR", "PRINT_FAIL");
+                    msg = "Printer error";
+                    break;
+                default:
+                    msg = "UNKNOWN";
+                    if(status > 0 ){
+                        promise.resolve(msg);
+                    }else if(status == -4){
+                        promise.resolve(msg);
+                    }
+                    else{
+                        promise.reject("ERROR", "PRINT_FAIL");
+                    }
+                    Log.e("STATUS PRINT", String.valueOf(status));
+//                    promise.reject("ERROR", "PRINT_FAIL");
+                    break;
+            }
+
+
+            // You can now display the message
+        });
     }
     @ReactMethod
     public void printRawDataESC(String address, String encode, Promise promise) {
@@ -253,12 +266,11 @@ public class Xprinter extends ReactContextBaseJavaModule {
         try {
             IDeviceConnection connection = connections.get(address);
             if (connection != null && connection.isConnect()) {
-
                         POSPrinter printer = new POSPrinter(connection);
                         Bitmap bmp = decodeBase64ToBitmap(base64String);
-                        printer.printBitmap(bmp, POSConst.ALIGNMENT_CENTER, width);
-                        printer.cutHalfAndFeed(1);
-                        statusXprinter(printer,promise);
+                        printer.printBitmap(bmp, POSConst.ALIGNMENT_CENTER, width).cutHalfAndFeed(1);
+
+                    statusXprinter(printer,promise);
 
             }else {
                 promise.reject("ERROR", "GET_ID_FAIL");
@@ -444,4 +456,10 @@ public class Xprinter extends ReactContextBaseJavaModule {
             }
         }
 
+
+
+        
+
 }
+
+

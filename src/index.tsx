@@ -265,24 +265,7 @@ export function initialPrinter(): Promise<string> {
     return SavanitdevThermalPrinter.initBLE();
   }
 }
-export function initialZyWellPrinter(): Promise<string> {
-  if (Platform.OS === "android") {
-    console.log("====================================");
-    console.log("initialPrinter");
-    console.log("====================================");
-    return ZyWell.initialPrinter();
-  } else {
-  }
-}
-export function clearPrinter(): Promise<string> {
-  if (Platform.OS === "android") {
-    console.log("====================================");
-    console.log("clearPrinter");
-    console.log("====================================");
-    return ZyWell.closePrinter();
-  } else {
-  }
-}
+
 export function requestUSBPermission(): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.tryGetUsbPermission();
@@ -520,6 +503,13 @@ export function printRawZyWell(encode: string): Promise<string> {
     // return ZyWell.connectUSBZyWell(ip);
   }
 }
+export function restartPrinter(): Promise<string> {
+  if (Platform.OS === "android") {
+    return ZyWell.restartPrinter();
+  } else {
+    // return ZyWell.connectUSBZyWell(ip);
+  }
+}
 export function getPrinterStatus(): Promise<string> {
   if (Platform.OS === "android") {
     return ZyWell.getPrinterStatus();
@@ -742,21 +732,29 @@ export async function cutESCX(index: number): Promise<string> {
 //---------------  Xprinter Label --------------- ///
 
 export async function printImgZPL(
-  index: number,
+  address: string,
   base64String: string,
   width: number,
+  printCount: number,
   x: number,
   y: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printImgZPL(index, base64String, width, x, y);
+    return await XPrinter.printImgZPL(
+      address,
+      base64String,
+      width,
+      printCount,
+      x,
+      y
+    );
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printImgTSPL(
-  index: number,
+  address: string,
   base64String: string,
   width: number,
   widthBmp: number,
@@ -768,7 +766,7 @@ export async function printImgTSPL(
 ): Promise<string> {
   if (Platform.OS === "android") {
     return await XPrinter.printImgTSPL(
-      index,
+      address,
       base64String,
       width,
       widthBmp,
@@ -784,91 +782,99 @@ export async function printImgTSPL(
   }
 }
 export async function printImgCPCL(
-  index: number,
+  address: string,
   base64String: string,
   width: number,
   y: number,
   x: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printImgCPCL(index, base64String, width, y, x);
+    return await XPrinter.printImgCPCL(address, base64String, width, y, x);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printRawDataZPL(
-  index: number,
+  address: string,
   base64String: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printImgCPCL(index, base64String);
+    return await XPrinter.printRawDataZPL(address, base64String);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printRawDataCPCL(
-  index: number,
+  address: string,
   base64String: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printRawDataCPCL(index, base64String);
+    return await XPrinter.printRawDataCPCL(address, base64String);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printRawDataTSPL(
-  index: number,
+  address: string,
   base64String: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printRawDataTSPL(index, base64String);
+    return await XPrinter.printRawDataTSPL(address, base64String);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printerStatusZPL(
-  index: number,
+  address: string,
   timeout: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printerStatus(index, timeout);
+    return await XPrinter.printerStatus(address, timeout);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function setPrintDensityZPL(
-  index: number,
+  address: string,
   density: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.setPrintDensity(index, density);
+    return await XPrinter.setPrintDensity(address, density);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function setPrintOrientationZPL(
-  index: number,
+  address: string,
   orientation: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.setPrintOrientation(index, orientation);
+    return await XPrinter.setPrintOrientation(address, orientation);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function setPrintSpeedZPL(
-  index: number,
+  address: string,
   speed: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.setPrintSpeed(index, speed);
+    return await XPrinter.setPrintSpeed(address, speed);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
+export async function statusXprinter(address: string): Promise<string> {
+  if (Platform.OS === "android") {
+    return await XPrinter.statusXprinter(address);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();

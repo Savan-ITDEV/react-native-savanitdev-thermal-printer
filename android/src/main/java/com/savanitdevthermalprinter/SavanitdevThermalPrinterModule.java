@@ -132,8 +132,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             promise.reject("ERROR", e.toString());
         }
     }
-
-
+  
     @ReactMethod
     public void startQuickDiscovery(int timeout, Promise promise) {
         new Thread() {
@@ -849,6 +848,8 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }
     }
 
+
+
     @ReactMethod
     private void getLangModel() {
         if (ISCONNECT) {
@@ -873,7 +874,10 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             });
         }
     }
-
+    @ReactMethod
+    public void restartPrinter() {
+        sendDataToPrinter(new byte[]{27, 115, 66, 69, -110, -102, 1, 0, 95, 10});
+    }
     public void sendDataToPrinter(byte[] bArr) {
         if (ISCONNECT) {
             myBinder.Write(bArr, new TaskCallback() {
