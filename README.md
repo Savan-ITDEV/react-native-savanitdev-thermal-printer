@@ -4,23 +4,35 @@
 
 | Expo | ✅  
 | React Native CLI | ✅
+| Flutter | ✅
 
-| Implement | Android | IOS |
-| --------- | ------- | --- |
-| Base64    | ✅      | ✅  |
+| Implement      | Android | IOS |
+| -------------- | ------- | --- |
+| Base64         | ✅      | ✅  |
+| Label          | ✅      | ✅  |
+| multiple print | ✅      | ✅  |
+| XPrinter       | ✅      | ✅  |
+| ZyWell         | ✅      | ✅  |
 
 ## Support
 
 | Printer    | Android | IOS         |
 | ---------- | ------- | ----------- |
-| BLEPrinter | ✅      | coming soon |
+| BLEPrinter | ✅      | ✅          |
 | NetPrinter | ✅      | ✅          |
+| USB        | ✅      | coming soon |
 
 <br />
 <div style="display: flex; flex-direction: row; align-self: center; align-items: center">
 <img src="https://i.ibb.co/30j9w2H/img1.jpg" alt="bill" width="370" height="580"/>
 <img src="https://i.ibb.co/5Kr2JD4/img2.jpg" alt="screenshot" width="370" height="580"/>
 </div>
+
+## Example multiple printing 5 printers
+
+- support print WIFI,BTE and USB in one time
+
+<https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx>
 
 ## Installation
 
