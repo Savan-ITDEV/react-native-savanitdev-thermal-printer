@@ -46,6 +46,17 @@ const XPrinter = NativeModules.Xprinter
       }
     );
 
+// init printer and request permissions
+export function initializePrinter() {
+  if (Platform.OS === "android") {
+    handleAndroidPermissions();
+  } else {
+    return SavanitdevThermalPrinter.initializePrinter();
+  }
+}
+
+// Android native call function
+
 export function connectNet(ip: string): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.connectNet(ip);
@@ -706,7 +717,11 @@ export async function printImgESCX(
     return await XPrinter.printImgESCX(address, base64String, width);
   } else {
     // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    return await SavanitdevThermalPrinter.printImgESC(
+      address,
+      base64String,
+      width
+    );
   }
 }
 export async function printRawDataESC(
@@ -717,7 +732,10 @@ export async function printRawDataESC(
     return await XPrinter.printRawDataESC(address, base64String);
   } else {
     // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    return await SavanitdevThermalPrinter.printRawDataESC(
+      address,
+      base64String
+    );
   }
 }
 export async function cutESCX(index: number): Promise<string> {
@@ -740,7 +758,10 @@ export async function printImgZPL(
   y: number
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await XPrinter.printImgZPL(
+    return XPrinter.printImgZPL(address, base64String, width, printCount, x, y);
+  } else {
+    // IP just required for IOS
+    return SavanitdevThermalPrinter.printImgZPL(
       address,
       base64String,
       width,
@@ -748,9 +769,6 @@ export async function printImgZPL(
       x,
       y
     );
-  } else {
-    // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
 export async function printImgTSPL(
@@ -803,7 +821,10 @@ export async function printRawDataZPL(
     return await XPrinter.printRawDataZPL(address, base64String);
   } else {
     // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    return await SavanitdevThermalPrinter.printRawDataZPL(
+      address,
+      base64String
+    );
   }
 }
 export async function printRawDataCPCL(

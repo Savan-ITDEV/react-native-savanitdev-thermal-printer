@@ -1,723 +1,701 @@
 //
-//  TscCommand.h
+//  TSCCommand.h
 //  Printer
-//
-//  Created by LeeLee on 16/7/19.
-//  Copyright © 2016年 Admin. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
-#import "UIKit/UIKit.h"
-#import "ImageTranster.h"
-///TSC指令类，调用其类方法可返回Nsdata类型的数据，用于发送，此类只适用于TSC打印机
-@interface TscCommand : NSObject
+#import <UIKit/UIKit.h>
+
+typedef NS_ENUM (NSUInteger,AutoResponse){
+    OFF     = 0,//关闭自动返回状态功能
+    ON      = 1,//打开自动返回状态功能，每打印完一张返回一次
+    BATCH   = 2,//打开自动返回状态功能，打印完毕后返回一次
+};
+
+@interface TSCCommand : NSObject
 
 /**
- this command defines the label width and lenth
- 设定标签纸的宽度及长度
- SIZE m mm,n mm
- 单位 mm
- @param m label width
- @param n label length
- @discussion
+ Defines the label width and length in millimeters.
+ 设定标签纸的宽度及长度（单位：毫米）
+ @param m Label width
+ @param n Label length
+ @return Data command
  */
-+(NSData *) sizeBymmWithWidth:(double) m andHeight:(double) n;
++ (NSData *)sizeBymmWithWidth:(double)m andHeight:(double)n;
 
 /**
- this command defines the label width and lenth
- 设定标签纸的宽度及长度
- SIZE m ,n
- 单位 inch
- @param m label width
- @param n label length
+ Defines the label width and length in inches.
+ 设定标签纸的宽度及长度（单位：英寸）
+ @param m Label width
+ @param n Label length
+ @return Data command
  */
-+(NSData *) sizeByinchWithWidth:(double) m andHeight:(double) n;
++ (NSData *)sizeByinchWithWidth:(double)m andHeight:(double)n;
 
 /**
- this command defines the label width and lenth
- 设定标签纸的宽度及高度
- SIZE m ,n
- 单位 dot
- @param m  label width
- @param n label length
+ Defines the label width and height in dots.
+ 设定标签纸的宽度及高度（单位：点）
+ @param m Label width
+ @param n Label height
+ @return Data command
  */
-+(NSData *) sizeBydotWithWidth:(int) m andHeight:(int) n;
++ (NSData *)sizeBydotWithWidth:(int)m andHeight:(int)n;
 
 /**
- this command defines the gap distance between to labels
- 设置标签纸的垂直间距
- GAP m mm,n mm
- 单位 mm
- @param m the gap distance between two labels
- @param n the offset distance of the gap
+ Defines the gap distance between two labels vertically.
+ 设置标签纸的垂直间距（单位：毫米）
+ @param m Gap distance between two labels
+ @param n Offset distance of the gap
+ @return Data command
  */
-+(NSData *) gapBymmWithWidth:(double) m andHeight:(double) n;
-
++ (NSData *)gapBymmWithWidth:(double)m andHeight:(double)n;
 
 /**
- 
- this command defines the gap distance between to labels
- 设置标签纸的间距
- GAP m,n
- 单位 inch
- @param m the gap distance between two labels
- @param n the offset distance of the gap
+ Defines the gap distance between two labels vertically.
+ 设置标签纸的垂直间距（单位：英寸）
+ @param m Gap distance between two labels
+ @param n Offset distance of the gap
+ @return Data command
  */
-+(NSData *) gapByinchWithWidth:(double) m andHeight:(double) n;
++ (NSData *)gapByinchWithWidth:(double)m andHeight:(double)n;
 
 /**
- this command defines the gap distance between to labels
- 设置标签纸的间距
- GAP m,n
- 单位 dot
- @param m the gap distance between two labels
- @param n the offset distance of the gap
+ Defines the gap distance between two labels vertically.
+ 设置标签纸的垂直间距（单位：点）
+ @param m Gap distance between two labels
+ @param n Offset distance of the gap
+ @return Data command
  */
-+(NSData *) gapBydotWithWidth:(int) m andHeight:(int) n;
++ (NSData *)gapBydotWithWidth:(int)m andHeight:(int)n;
 
 /**
- this command feeds the paper throught the gap sensor in an effort to determine the paper and gap sizes,respectively.
- 
- GAPDETECT x,y
- 单位 （dot）
- @param x paper length（in dots）
- @param y gap length(in dots)
+ Feeds the paper through the gap sensor to determine the paper and gap sizes.
+ 在通过间隙传感器的努力下，对纸张和间隙的大小进行测量（单位：点）
+ @param x Paper length in dots
+ @param y Gap length in dots
+ @return Data command
  */
-+(NSData *) gapDetectWithX:(int) x andY:(int) y;
-/**
- this command feeds the paper through the gap sensor in an effort to determine the paper and gap sizes,respectively.
- 
- GAPDETECT
- 
- ( */
-
-+(NSData *) gapDetect;
++ (NSData *)gapDetectWithX:(int)x andY:(int)y;
 
 /**
- this command feeds the paper through the black mark sensor in an effort to the determine the paper and black mark size.
- BLINEDDETECT X,Y
- @param x paper lenght(in dots)
- @param y gap lenght(in dots)
+ Feeds the paper through the gap sensor to determine the paper and gap sizes.
+ 通过间隙传感器将纸张送出，以确定纸张和间隙的大小
+ @return Data command
  */
-+(NSData *) blinedDetectWithX:(int) x andY:(int) y;
++ (NSData *)gapDetect;
 
 /**
- this command feeds the paper through the gap/black mark sensor in an effort to deternine the paper and gap/black mark size.
- AUTODETECT X,Y
- @param x paper length(in dots)
- @param y gap length(in dots)
+ Feeds the paper through the black mark sensor to determine the paper and black mark size.
+ 通过黑标传感器将纸张送出，以确定纸张和黑标的大小（单位：点）
+ @param x Paper length in dots
+ @param y Black mark length in dots
+ @return Data command
  */
-+(NSData *) autoDetectWithX:(int) x andY:(int) y;
++ (NSData *)blinedDetectWithX:(int)x andY:(int)y;
 
 /**
- this command sets the height of the black line and the user-defined extra label feeding length each from feed takes.
- 设定黑标的高度及偏移位置
- BLINE M,N
- 单位 inch
- @param m the height of black line in  mm
- @param n  the extra label feeding length
+ Feeds the paper through the gap/black mark sensor to determine the paper and gap/black mark size.
+ 通过间隙/黑标传感器将纸张送出，以确定纸张和间隙/黑标的大小（单位：点）
+ @param x Paper length in dots
+ @param y Gap/Black mark length in dots
+ @return Data command
  */
-+(NSData *) blineByinchWithM:(double) m andN:(double) n;
++ (NSData *)autoDetectWithX:(int)x andY:(int)y;
 
 /**
- this command sets the height of the black line and the user-defined extra label feeding length each from feed takes.
- 设定黑标的高度及偏移位置
- BLINE M,N
- 单位 inch
- @param m the height of black line in inch
- @param n the extra label feeding length
+ Sets the height of the black line and the extra label feeding length.
+ 设置黑线的高度和用户定义的每次进纸所需的额外标签进纸长度（单位：英寸）
+ @param m Height of black line in millimeters
+ @param n Extra label feeding length
+ @return Data command
  */
-+(NSData *) blineBymmWithM:(double) m andN:(double) n;
++ (NSData *)blineByinchWithM:(double)m andN:(double)n;
+
 
 /**
- this command sets the height of the black line and the user-defined extra label feeding length each from feed takes.
- 设定黑标的高度及偏移位置
- BLINE M,N
- @param m  the height of black line either in dot
- @param n the extra label feeding length
+ Sets the height of the black line and the user-defined extra label feeding length for each feed action.
+ 设定黑标的高度及偏移位置（单位：毫米）
+ @param m Height of black line in inches
+ @param n Extra label feeding length
+ @return Data command
  */
-+(NSData *) blineBydotWithM:(int) m andN:(int) n;
++ (NSData *)blineBymmWithM:(double)m andN:(double)n;
 
 /**
- this command sets the position of label under the pee-off mode.
- OFFSET m
- 剥离模式下，控制每张标签停止的位置
- 单位 inch
- @param m the offset distance(in inch)
+ Sets the height of the black line and the user-defined extra label feeding length for each feed action.
+ 设定黑标的高度及偏移位置（单位：点）
+ @param m Height of black line in dots
+ @param n Extra label feeding length
+ @return Data command
  */
-+(NSData *) offSetByinchWithM:(double) m;
++ (NSData *)blineBydotWithM:(int)m andN:(int)n;
 
 /**
- this command sets the position of label under the pee-off mode.
- OFFSET m mm
- 剥离模式下，控制每张标签停止的位置
- 单位 mm
- @param m the offset distance(in mm)
+ Sets the position of label under the peel-off mode.
+ 在剥离模式下，设置每张标签停止的位置（单位：英寸）
+ @param m Offset distance (in inches)
+ @return Data command
  */
-+(NSData *) offSetBymmWithM:(double) m;
++ (NSData *)offSetByinchWithM:(double)m;
 
 /**
- this command sets the position of label under the pee-off mode.
- OFFSET m mm
- 剥离模式下，控制每张标签停止的位置
- 单位 dot
- @param m the offset distance(in dots)
+ Sets the position of label under the peel-off mode.
+ 在剥离模式下，设置每张标签停止的位置（单位：毫米）
+ @param m Offset distance (in millimeters)
+ @return Data command
  */
-+(NSData *) offSetBydotWithM:(int) m;
++ (NSData *)offSetBymmWithM:(double)m;
 
 /**
- this command defines the print speed
- SPEED N
- 设置走纸速度
-@param n  printing speed in inch per second
+ Sets the position of label under the peel-off mode.
+ 在剥离模式下，设置每张标签停止的位置（单位：点）
+ @param m Offset distance (in dots)
+ @return Data command
  */
-
-+(NSData *) speed:(double) n;
++ (NSData *)offSetBydotWithM:(int)m;
 
 /**
- this command sets the printing daekesss
- DENSITY n
-@param n  specifiles the lightest/darkest level
+ Defines the print speed.
+ 设置走纸速度（单位：英寸/秒）
+ @param n Printing speed in inches per second
+ @return Data command
  */
-
-+(NSData *) density:(int) n;
++ (NSData *)speed:(double)n;
 
 /**
- this command defines the printout direction and mirror image.this will be stored in the printermemory.
+ Sets the printing darkness.
+ 设置打印浓度
+ @param n Specifies the lightest/darkest level
+ @return Data command
+ */
++ (NSData *)density:(int)n;
+
+
+/**
+ Defines the printout direction and mirror image. This will be stored in the printer memory.
  定义打印时出纸方向
  DIRECTION n
-@param n  0 or 1,please refer to the illustrations below.
+ @param n 0 or 1, please refer to the illustrations below.
+ @return Data command
  */
-
-+(NSData *) direction:(int) n;
++ (NSData *)direction:(int)n;
 
 /**
- this command defines the reference point the of the label.the referce (origin) point varies with the print direction,as shown.
+ Defines the reference point of the label. The reference (origin) point varies with the print direction, as shown.
  用于定义标签的参考坐标原点
  REFERENCE x,y
- @param x   Horizontal coordinate(in dots).
- @param y    Vertical coordinate (in dots).
+ @param x Horizontal coordinate (in dots)
+ @param y Vertical coordinate (in dots)
+ @return Data command
  */
-+(NSData *) referenceWithX:(int) x andY:(int) y;
++ (NSData *)referenceWithX:(int)x andY:(int)y;
 
 /**
- this command moves the label's vertical position.
+ Moves the label's vertical position.
+ 移动标签的垂直位置
  SHIFT n
-@param n  the maximum calue is 1 inch.for 200 dpi printers,this range is -203 to 203;for 300 dpi printers,the range is -300 to 300.this unit is dot.
+ @param n The maximum value is 1 inch. For 200 dpi printers, this range is -203 to 203; for 300 dpi printers, the range is -300 to 300. This unit is dots.
+ @return Data command
  */
-
-+(NSData *) shift:(int) n;
-
-///this command orients the keyboard for use in different countries via defining special characters on the KP-200 series portable LCD keyboard (option).
-///用于选择国际字符集
-/// @param countryCoding the keyboard for use in different countries via defining special characters
-+(NSData *) country:(NSString *) countryCoding;
++ (NSData *)shift:(int)n;
 
 /**
- this command orients the keyboard for use in different countries via defining special characters on the KP-200 series portable LCD keyboard (option).
+ Orients the keyboard for use in different countries via defining special characters on the KP-200 series portable LCD keyboard (option).
+ 用于选择国际字符集
+ COUNTRY n
+ @param countryCoding The keyboard for use in different countries via defining special characters
+ @return Data command
+ */
++ (NSData *)country:(NSString *)countryCoding;
+
+/**
+ Orients the keyboard for use in different countries via defining special characters on the KP-200 series portable LCD keyboard (option).
  指定字符编码
- CODEPAE n
- @param str  the name of codepage;
+ CODEPAGE n
+ @param str The name of codepage
+ @return Data command
  */
-
-+(NSData *) codePage:(NSString *) str;
++ (NSData *)codePage:(NSString *)str;
 
 /**
- this command clears the iamge buffer.
+ Clears the image buffer.
  清除缓存
  CLS
- 
+ @return Data command
  */
-
-+(NSData *) cls;
++ (NSData *)cls;
 
 /**
- this command feeds label with the specified length. the length is specified by dot.
+ Feeds label with the specified length. The length is specified by dots.
  控制进纸距离，单位dot
  FEED n
-@param n  the length label feeds.
+ @param n The length label feeds
+ @return Data command
  */
-
-+(NSData *) feed:(int) n;
++ (NSData *)feed:(int)n;
 
 /**
- this command feeds the label in reverse.the length is specified by dot.
+ Feeds the label in reverse. The length is specified by dots.
+ 后退进纸，单位dot
  BACKFEED n
- n的单位 dot
-@param n  the length babel feeds in reverse.
+ @param n The length label feeds in reverse
+ @return Data command
  */
-
-+(NSData *) backFeed:(int) n;
++ (NSData *)backFeed:(int)n;
 
 /**
- this command feeds label to the beginning of next label.
+ Feeds label to the beginning of next label.
  FORMFEED
- 
+ @return Data command
  */
++ (NSData *)formFeed;
 
-+(NSData *) formFeed;
 
 /**
- 
- this command will feed label until the sensor has determined origin.
+ This command will feed label until the sensor has determined origin.
  HOME
- 
  */
-
-+(NSData *) home;
++ (NSData *)home;
 
 /**
- this command prints the label format currently stored in the image buffer.
- PRINT M,N
-@param m  specifies how many sets of labels will be printed
-@param n  specifies how many copies should be printed for each particular label set.
+ This command prints the label format currently stored in the image buffer.
+ PRINT m,n
+ @param m Specifies how many sets of labels will be printed
+ @param n Specifies how many copies should be printed for each particular label set
  */
-+(NSData *) printWithM:(int) m andN:(int) n;
++ (NSData *)printWithM:(int)m andN:(int)n;
 
 /**
- this command prints the label format currently stored in the image buffer.
+ This command prints the label format currently stored in the image buffer.
  PRINT m
- @param m   specifies how many sets of labels will be printed
+ @param m Specifies how many sets of labels will be printed
  */
-
-+(NSData *) print:(int) m;
++ (NSData *)print:(int)m;
 
 /**
- this command controls the sound frequency of the beeper .there are 10 levels of sounds
+ This command controls the sound frequency of the beeper. There are 10 levels of sounds.
  SOUND level,interval
- @param level sound level:0-9.
- @param interval sound interval:1-4095.
+ @param level Sound level: 0-9
+ @param interval Sound interval: 1-4095
  */
-+(NSData *) soundWithLevel:(int) level andInterval:(int) interval;
++ (NSData *)soundWithLevel:(int)level andInterval:(int)interval;
 
 /**
- this command activates the cutter to immediately cut the labels without back feeding the label.
- 切纸
+ This command activates the cutter to immediately cut the labels without back feeding the label.
  CUT
- 
  */
-
-+(NSData *) cut;
++ (NSData *)cut;
 
 /**
- this command use to stop feeding paper while feed paper wrong.
- 用于设定打印机进纸时，无法检测到垂直间距，发送错误，停止进纸
+ This command is used to stop feeding paper while feed paper wrong.
  LIMITFEED n
- 单位 inch
-@param n the limit length of wrong(in inch).
+ @param n The limit length of wrong (in inch)
  */
-
-+(NSData *) limitFeedByinch:(double) n;
++ (NSData *)limitFeedByinch:(double)n;
 
 /**
- this command use to stop feeding paper while feed paper wrong.
- 用于设定打印机进纸时，无法检测到垂直间距，发送错误，停止进纸
+ This command is used to stop feeding paper while feed paper wrong.
  LIMITFEED n
- 单位 mm
-@param n the limit length of wrong(in mm).
+ @param n The limit length of wrong (in mm)
  */
-
-+(NSData *) limitFeedBymm:(double) n;
-
++ (NSData *)limitFeedBymm:(double)n;
 
 /**
- this command use to stop feeding paper while feed paper wrong.
- 用于设定打印机进纸时，无法检测到垂直间距，发送错误，停止进纸
+ This command is used to stop feeding paper while feed paper wrong.
  LIMITFEED n
- 单位 dot
-@param n the limit length of wrong(in dots).
+ @param n The limit length of wrong (in dots)
  */
-
-+(NSData *) limitFeedBydot:(int) n;
++ (NSData *)limitFeedBydot:(int)n;
 
 /**
- At this command ,the printer will print out the printer information
+ At this command, the printer will print out the printer information.
  SELFTEST
- 
  */
-
-+(NSData *) selfTest;
++ (NSData *)selfTest;
 
 /**
- At this command,the printer will print out the printer information
+ At this command, the printer will print out the printer information.
  SELFTEST page
-@param page the one kind of the printer informations.
+ @param page The type of printer information
  */
-
-+(NSData *) selfTest:(NSString *) page;
++ (NSData *)selfTest:(NSString *)page;
 
 /**
- let the printer wait until process of commands (before EOJ) be then go on the next command
+ Let the printer wait until process of commands (before EOJ) be then go on the next command.
  EOJ
- 
  */
-
-+(NSData *) eoj;
++ (NSData *)eoj;
 
 /**
- let the printer wait specific period of time then go on next command
+ Let the printer wait specific period of time then go on next command.
  DELAY ms
-@param ms  print delay how many seconds.
+ @param ms Print delay how many seconds
  */
-
-+(NSData *) delay:(int) ms;
++ (NSData *)delay:(int)ms;
 
 /**
- this command can show the image ,which is in printer's image buffer,on LCD panel
+ This command can show the image, which is in printer's image buffer, on LCD panel.
  DISPLAY IMAGE/OFF
-@param str  IMAGE showthe image in printer's image buffer,on LCD panel
-                  OFF   disable this finction.
+ @param str IMAGE: Show the image in printer's image buffer on LCD panel
+            OFF: Disable this function
  */
-
-+(NSData *) display:(NSString*) str;
++ (NSData *)display:(NSString *)str;
 
 /**
- this command can restore printer settings to defaults
+ This command can restore printer settings to defaults.
  INITIALPRINTER
- 
  */
-
-+(NSData *) initialPrinter;
++ (NSData *)initialPrinter;
 
 /**
- this command draws a bar on the label format.
- BAR x,y,width,heigt
- 
- @param x   the upper left corner x-coordinate (in dots).
- @param y    the upper left corner y-coordinate (in dots).
-@param w bar width(in dots).
-@param h bar height(in dots).
- 
+ This command draws a bar on the label format.
+ BAR x,y,w,h
+ @param x The upper left corner x-coordinate (in dots)
+ @param y The upper left corner y-coordinate (in dots)
+ @param w Bar width (in dots)
+ @param h Bar height (in dots)
  */
-+(NSData *) barWithX:(int) x andY:(int) y andWidth:(int) w andHeigt:(int) h;
-
-/**
- this command prints 1D barcodes
- BARCODE X,Y,"codetype",height,humanreadable,rotation,narrow,wide,"content"
- @param x   specify the x-coordinate.
- @param y    specify the y-coordinate.
-@param readable HRI readable,0-3;
-@param rotation graphic rotation,0-90-180-270;
-@param narrow space in uint.
-@param wide width of uint.
-@param content barcode's content.
-@param strEnCoding barcode's content's encoding.
- */
-+(NSData *) barcodeWithX:(int) x
-                    andY:(int) y
-             andCodeType:(NSString*) codetype
-               andHeight:(int) height
-        andHunabReadable:(int) readable
-             andRotation:(int) rotation
-               andNarrow:(int) narrow
-                 andWide:(int) wide
-              andContent:(NSString*) content
-           usStrEnCoding:(NSStringEncoding) strEnCoding;
++ (NSData *)barWithX:(int)x andY:(int)y andWidth:(int)w andHeigt:(int)h;
 
 
 /**
- this command draws bitmap images.
- BITMAP X,Y,width,height,mode,bitmap data
- @param x   specify the x-coordinate
- @param y    specify the y-coordinate
-@param mode graphic modes listed below:
-                0:OVERWRINTE
-                1:OR
-                2:XOR
- @param image the graphic you want to print.
- @param bmptype the type you want to print the image.
+ This command prints 1D barcodes.
+ 绘制一维码
+ @param x Specify the x-coordinate
+ @param y Specify the y-coordinate
+ @param codetype Type of barcode
+ @param height Height of barcode
+ @param readable HRI readable, 0-3
+ @param rotation Graphic rotation, 0-90-180-270
+ @param narrow Space in unit
+ @param wide Width of unit
+ @param content Barcode's content
+ @param strEnCoding Barcode's content's encoding
  */
-+(NSData *) bitmapWithX:(int) x
-                   andY:(int) y
-                andMode:(int) mode
-               andImage:(UIImage*) image
-             andBmpType:(BmpType) bmptype;
++ (NSData *)barcodeWithX:(int)x
+                   andY:(int)y
+            andCodeType:(NSString *)codetype
+              andHeight:(int)height
+       andHunabReadable:(int)readable
+            andRotation:(int)rotation
+              andNarrow:(int)narrow
+                andWide:(int)wide
+             andContent:(NSString *)content
+          usStrEnCoding:(NSStringEncoding)strEnCoding;
 
 /**
- this command draws rectangles on the label
- BOX X,Y,X_END,Y_END,LINE_THICNESS
- @param x   specify x-coordinate of upper left corner(in dots).
- @param y    specify y-coordinate of upper left corner(in dots).
-@param x_end specify x-coordinate of lower right corner(in dots).
-@param y_end specify y-coordinate of lower right corner(in dots).
-@param thickness sepcify the round corner.default is 0.
+ This command draws bitmap images.
+ 绘制bitmap图像
+ @param x Specify the x-coordinate
+ @param y Specify the y-coordinate
+ @param mode Graphic modes listed below:
+             0: OVERWRITE
+             1: OR
+             2: XOR
+ @param image The graphic you want to print
  */
-+(NSData *) boxWithX:(int) x
-                andY:(int) y
-             andEndX:(int) x_end
-             andEndY:(int) y_end
-        andThickness:(int) thickness;
++ (NSData *)bitmapWithX:(int)x
+                  andY:(int)y
+               andMode:(int)mode
+              andImage:(UIImage *)image;
 
 /**
- this command draws an ellipse on the label.
- ELLIPSE X,Y,width,height,thickness.
- @param x   specify x-coordinate of upper left corner(in dots).
- @param y    specify y-coordinate of upper left corner(in dots).
-@param width specify the width of the ellipse(in dots).
-@param height specify the height of the ellipse(in dots).
- 
+ This command draws rectangles on the label.
+ 绘制一个方框
+ @param x Specify x-coordinate of upper left corner (in dots)
+ @param y Specify y-coordinate of upper left corner (in dots)
+ @param x_end Specify x-coordinate of lower right corner (in dots)
+ @param y_end Specify y-coordinate of lower right corner (in dots)
+ @param thickness Specify the round corner, default is 0
  */
-+(NSData *) ellipseWithX:(int) x
-                    andY:(int) y
-                andWidth:(int) width
-               andHeight:(int) height
-            andThickness:(int) thickness;
++ (NSData *)boxWithX:(int)x
+                andY:(int)y
+             andEndX:(int)x_end
+             andEndY:(int)y_end
+        andThickness:(int)thickness;
 
 /**
- this command draws CODEBLOCK F mode barcode.
- CODABLOCK x,y,rotation,x,"content"
- @param x   specify the x-coordinate
- @param y    specify the y-coordinate
-@param rotation Rotate rotation degrees clockwise
-@param content content of codablock bar code.
+ This command draws an ellipse on the label.
+ 绘制一个椭圆
+ @param x Specify x-coordinate of upper left corner (in dots)
+ @param y Specify y-coordinate of upper left corner (in dots)
+ @param width Specify the width of the ellipse (in dots)
+ @param height Specify the height of the ellipse (in dots)
+ @param thickness Specify the thickness
  */
-+(NSData *) codaBlockFModeWithX:(int) x
-                           andY:(int) y
-                    andRotation:(int) rotation
-                     andContent:(NSString*) content;
++ (NSData *)ellipseWithX:(int)x
+                    andY:(int)y
+                andWidth:(int)width
+               andHeight:(int)height
+            andThickness:(int)thickness;
 
 /**
- this command draws an DataMatrix 2d barcode .
- 绘制二维条码DataMatrix
- DMATRIX x,y,width,height,content
- @param x   specify x-coordinate of upper left corner(in dots).
- @param y    specify y-coordinate of upper left corner(in dots).
-@param width specify the width of DataMatrix.
-@param height specify the height of DataMatrix.
-@param content the content of DataMatrix.
+ This command draws CODEBLOCK F mode barcode.
+ 绘制CODEBLOCK F模式的条形码
+ @param x Specify the x-coordinate
+ @param y Specify the y-coordinate
+ @param rotation Rotate rotation degrees clockwise
+ @param content Content of codablock barcode
  */
-+(NSData *) dmateixWithX:(int) x
-                    andY:(int) y
-                andWidth:(int) width
-               andHeight:(int) height
-              andContent:(NSString*) content
-           usStrEnCoding:(NSStringEncoding) strEnCoding;
++ (NSData *)codaBlockFModeWithX:(int)x
+                           andY:(int)y
+                    andRotation:(int)rotation
+                     andContent:(NSString *)content;
 
 /**
- this command clears a specified region in the image buffer
- ERASE x,y,width,height
- @param x   the x-coordinate of d=the starting point(in dots).
- @param y    the y-coordinate of d=the starting point(in dots).
-@param width the region width in x-axis direction(in dots).
-@param height the region height in y-axis direction(in dots).
+ This command draws a DataMatrix 2d barcode.
+ 绘制DataMatrix 2d条码
+ @param x Specify x-coordinate of upper left corner (in dots)
+ @param y Specify y-coordinate of upper left corner (in dots)
+ @param width Specify the width of DataMatrix
+ @param height Specify the height of DataMatrix
+ @param content The content of DataMatrix
+ @param strEnCoding Barcode's content's encoding
  */
-+(NSData *) eraseWithX:(int) x
-                  andY:(int) y
-              andWidth:(int) width
-             andHeight:(int) height;
++ (NSData *)dmateixWithX:(int)x
+                    andY:(int)y
+                andWidth:(int)width
+               andHeight:(int)height
+              andContent:(NSString *)content
+           usStrEnCoding:(NSStringEncoding)strEnCoding;
 
 /**
- this command defines a PDF417 2d bar code
- PDF417 x,y,width,height,rotatte,"content"
- 
+ This command clears a specified region in the image buffer.
+ 清除对应区域图像缓存
+ @param x The x-coordinate of the starting point (in dots)
+ @param y The y-coordinate of the starting point (in dots)
+ @param width The region width in x-axis direction (in dots)
+ @param height The region height in y-axis direction (in dots)
  */
-+(NSData *) pdf417WithX:(int) x
-                   andY:(int) y
-               andWidth:(int) width
-              andHeight:(int) height
-              andRotate:(int) rotate
-             andContent:(NSString*) content
-          usStrEnCoding:(NSStringEncoding) strEnCoding;
-/**
- this command prints BMP format images
- PUTBMP x,y,"filename",bpp,contrast
- 
- */
-+(NSData *) pubBmpWithX:(int) x
-                   andY:(int) y
-            andFileName:(NSString*) filename
-            andContrast:(int) contrast;
++ (NSData *)eraseWithX:(int)x
+                  andY:(int)y
+              andWidth:(int)width
+             andHeight:(int)height;
 
 /**
- this comand prints BMP format images
- PUTBMP x,y,"filename"
- @param x   the x-coordinate of the BMP format image
- @param y    the y-coordinate of the BMP format image
-@param filename the download BMP filename.
+ This command defines a PDF417 2d barcode.
+ 绘制PDF417 2d条码
  */
-+(NSData *) putBmpWithX:(int) x
-                   andY:(int) y
-            andFileName:(NSString*) filename;
++ (NSData *)pdf417WithX:(int)x
+                   andY:(int)y
+               andWidth:(int)width
+              andHeight:(int)height
+              andRotate:(int)rotate
+             andContent:(NSString *)content
+          usStrEnCoding:(NSStringEncoding)strEnCoding;
 
 /**
- this command prints PCX format images.
- PUTPCX x,y,"filename"
- @param x   the x-coordinate of the BMP format image
- @param y    the y-coordinate of the BMP format image
-@param filename the download pcx filename.
-
+ This command prints BMP format images.
+ 打印BMP格式的图像
  */
-+(NSData *) putPcxWithX:(int) x
-                   andY:(int) y
-            andFileName:(NSString*) filename;
-
-/**
- this command prints qr code
- QRCODE x,y,ecclevel,cell_width,mode,rotation,"content"
- @param x   the upper left corner x-coordinate of the QRcode.
- @param y    the upper left corner y-coordinate of the QRcode.
-@param ecclevel error correction revovery level.
-@param cellwidth 1~10.
-@param mode A or M.
-@param rotation 0 or 90 or 180 or 270.
-@param content the content of QRcode.
- @param strEnCoding the encoding of content.
- */
-+(NSData *) qrCodeWithX:(int) x
-                   andY:(int) y
-            andEccLevel:(NSString*) ecclevel
-           andCellWidth:(int) cellwidth
-                andMode:(NSString*) mode
-            andRotation:(int) rotation
-             andContent:(NSString*) content
-          usStrEnCoding:(NSStringEncoding) strEnCoding;
-
-/**
- this command reverses a region in image buffer.
- REVERSE x_start,y_start,x_width,y_height
- @param x   the x-coordinate of the starting point(in dots).
- @param y    the y-coordinate of the starting point(in dots).
-@param width x-axis region width(in dots).
-@param height y-axis region height(in dots).
- */
-+(NSData *) reverseWithX:(int) x
-                    andY:(int) y
-                andWidth:(int) width
-               andHeight:(int) height;
-
-/**
- this command prints text on label
- TEXT x,y,"font",rotation,x_multiplication,y_multiplication,"content"
- @param x   the x-coordinate of text.
- @param y    the y-coordinate of text.
-@param font font name.
-@param rotation the rotation angle of text.
-@param x_mul horizontal multiplication,up to 10x.
-@param y_mul vertical multiplication,up to 10x.
-@param content the content of text string.
-@param strEnCoding the encoding of the content string.
- */
-+(NSData *) textWithX:(int) x
-                 andY:(int) y
-              andFont:(NSString*) font
-          andRotation:(int) rotation
-             andX_mul:(int) x_mul
-             andY_mul:(int) y_mul
-           andContent:(NSString*) content
-        usStrEnCoding:(NSStringEncoding) strEnCoding;
-
-/**
- this command prints paragraph on label
- BLOCK x,y,width,"font",rotation,x_mul,y_mul,"content"
- 
- */
-+(NSData *) blockWithX:(int) x
-                  andY:(int) y
-              andWidth:(int) width
-             andHeight:(int) height
-               andFont:(NSString*) font
-           andRotation:(int) rotaion
-              andX_mul:(int) x_mul
-              andY_mul:(int) y_mul
-
-             andConten:(NSString*) content
-         usStrEnCoding:(NSStringEncoding) strEnCoding;
-
-/**
- this command obiains the printer status at any time.
- <ESC> !?
- 1D 61 1F
- */
-
-+(NSData *) checkPrinterStatusByPort9100;
-
-/**
- this command obiains the printer status at any time.
- 
- 1B 76 00
- */
-
-+(NSData *) checkPrinterStatusByPort4000;
++ (NSData *)pubBmpWithX:(int)x
+                   andY:(int)y
+            andFileName:(NSString *)filename
+            andContrast:(int)contrast;
 
 
 /**
- Download 程序档
- DOWNLOAD "EXAMPLE.BAS"
- 
+ This command prints BMP format images.
+ 打印 BMP 格式的图像
+ @param x The x-coordinate of the BMP format image
+ @param y The y-coordinate of the BMP format image
+ @param filename The download BMP filename
  */
++ (NSData *)putBmpWithX:(int)x
+                   andY:(int)y
+            andFileName:(NSString *)filename;
 
-+(NSData *) download:(NSString*) filename;
+/**
+ This command prints PCX format images.
+ 打印 PCX 格式图片
+ @param x The x-coordinate of the BMP format image
+ @param y The y-coordinate of the BMP format image
+ @param filename The download pcx filename
+ */
++ (NSData *)putPcxWithX:(int)x
+                   andY:(int)y
+            andFileName:(NSString *)filename;
+
+/**
+ This command prints QR code.
+ 打印二维码
+ @param x The upper left corner x-coordinate of the QRcode
+ @param y The upper left corner y-coordinate of the QRcode
+ @param ecclevel Error correction recovery level
+ @param cellwidth Width of each cell (1~10)
+ @param mode A or M
+ @param rotation Rotation angle (0, 90, 180, 270)
+ @param content The content of QRcode
+ @param strEnCoding The encoding of content
+ */
++ (NSData *)qrCodeWithX:(int)x
+                   andY:(int)y
+            andEccLevel:(NSString *)ecclevel
+           andCellWidth:(int)cellwidth
+                andMode:(NSString *)mode
+            andRotation:(int)rotation
+             andContent:(NSString *)content
+          usStrEnCoding:(NSStringEncoding)strEnCoding;
+
+/**
+ This command reverses a region in image buffer.
+ 将指定区域的图像缓存反白
+ @param x The x-coordinate of the starting point (in dots)
+ @param y The y-coordinate of the starting point (in dots)
+ @param width The x-axis region width (in dots)
+ @param height The y-axis region height (in dots)
+ */
++ (NSData *)reverseWithX:(int)x
+                    andY:(int)y
+                andWidth:(int)width
+               andHeight:(int)height;
+
+/**
+ This command prints text on label.
+ 在标签上打印文本
+ @param x The x-coordinate of text
+ @param y The y-coordinate of text
+ @param font Font name
+ @param rotation Rotation angle of text
+ @param x_mul Horizontal multiplication, up to 10x
+ @param y_mul Vertical multiplication, up to 10x
+ @param content The content of text string
+ @param strEnCoding The encoding of the content string
+ */
++ (NSData *)textWithX:(int)x
+                 andY:(int)y
+              andFont:(NSString *)font
+          andRotation:(int)rotation
+             andX_mul:(int)x_mul
+             andY_mul:(int)y_mul
+           andContent:(NSString *)content
+        usStrEnCoding:(NSStringEncoding)strEnCoding;
+
+/**
+ This command prints paragraph on label.
+ 在标签上打印段落
+ */
++ (NSData *)blockWithX:(int)x
+                  andY:(int)y
+              andWidth:(int)width
+             andHeight:(int)height
+               andFont:(NSString *)font
+           andRotation:(int)rotaion
+              andX_mul:(int)x_mul
+              andY_mul:(int)y_mul
+             andConten:(NSString *)content
+         usStrEnCoding:(NSStringEncoding)strEnCoding;
+
+/**
+ This command obtains the printer status at any time.
+ 获取打印机状态
+ */
++ (NSData *)checkPrinterStatusByPort9100;
+
+/**
+ This command obtains the printer status at any time.
+ 获取打印机状态
+ */
++ (NSData *)checkPrinterStatusByPort4000;
+
+/**
+ Download 程序档.
+ 下载程序档
+ @param filename The filename to download
+ */
++ (NSData *)download:(NSString *)filename;
+
 
 
 /**
- 
- Download 文本档
+ Download 文本档.
  DOWNLOAD "FILENAME",DATASIZE,CONTENT
- 
+ @param filename The filename to download
+ @param size The size of the data
+ @param content The content of the file
  */
-
-+(NSData *) download:(NSString*) filename
-             andSize:(int) size
-           andConten:(NSString*) content;
++ (NSData *)download:(NSString *)filename
+            andSize:(int)size
+          andConten:(NSString *)content;
 
 
 /**
- Download 文本文件档
+ Download 文本文件档.
  DOWNLOAD "FILENAME",FILE SIZE,DATA CONTENT
- 
+ @param filename The filename to download
+ @param url The file URL
  */
-
-+(NSData *) download:(NSString*) filename
-             andPath:(NSURL*) url;
-
++ (NSData *)download:(NSString *)filename
+            andPath:(NSURL *)url;
 
 /**
- Download 图档
- DOWNLOAD "EXAMPLE.BAS"
- 
- */
-
-//+(NSData *) download:(NSString*) filename
-//          andImage:(UIImage*) image;
-
-/**
- End of program,to declare the start and the end of BASIC language used in progra.
+ End of program, to declare the start and the end of BASIC language used in program.
  EOP
- 
  */
-
-+(NSData *) eop;
++ (NSData *)eop;
 
 /**
- this command prints out the total memory size,available memory size and files lists in the printer memory.
+ This command prints out the total memory size, available memory size and files lists in the printer memory.
  FILES
- 
  */
-
-+(NSData *) files;
++ (NSData *)files;
 
 /**
- this command delects a file in the printer memory
- KILL "FILENAME"
- 
+ This command deletes a file in the printer memory.
+ 此命令会删除打印机记忆体中的文件
+ @param filename The name of the file to be deleted
  */
-
-+(NSData *) kill:(NSString*) filename;
++ (NSData *)kill:(NSString *)filename;
 
 /**
- this command moves download files from DRAM to FLASH memory.
- MOVE
- 
+ This command moves download files from DRAM to FLASH memory.
+ 此命令可以将 DRAM 中的文件移动到 FLASH 中
  */
-
-+(NSData *) move;
++ (NSData *)move;
 
 /**
- this command executes a program resdent in the printer memory.it is available for TSPL2 printers only.
- RUN "FILENAME.BAS"
- 
+ This command executes a program resident in the printer memory. It is available for TSPL2 printers only.
+ 此命令用来执行打印机内存中所保存的文件
+ @param filename The name of the program file to be executed
  */
++ (NSData *)run:(NSString *)filename;
 
-+(NSData *) run:(NSString*) filename;
+/**
+ This command sets the printer to automatically return information.
+ 设定打印机自动返回信息
+ @param response The type of auto response to set
+ */
++ (NSData *)setAutoResponse:(AutoResponse)response;
+
+/**
+ This command draws bitmap images.
+ 绘制bitmap图像
+ @param x The x-coordinate
+ @param y The y-coordinate
+ @param mode Graphic modes listed below:
+             0: OVERWRITE
+             1: OR
+             2: XOR
+             3: OVERWRITE + zlib
+             4: OR + zlib
+             5: XOR + zlib
+ @param image The graphic you want to print
+ */
++ (NSData *)zlibBitmapWithX:(int)x
+                      andY:(int)y
+                   andMode:(int)mode
+                  andImage:(UIImage *)image;
+
+/**
+ 设定开启/关闭送纸至撕纸线的功能
+ @param isOpen YES 标签打印结束时将送纸至撕纸位置 NO 标签打印结束时会将标签起印点停留至打印线位置
+ */
++ (NSData *)setTear:(BOOL)isOpen;
+
+/**
+ 设定启动/关闭自动剥纸器功能
+ @param isOpen YES 开启自动剥纸器的功能 NO 关闭自动剥纸器的功能
+ */
++ (NSData *)setPeel:(BOOL)isOpen;
 
 @end

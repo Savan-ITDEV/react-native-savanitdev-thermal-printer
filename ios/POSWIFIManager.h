@@ -1,91 +1,162 @@
+//
+//  POSWIFIManager.h
+//  Printer
+//
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import "PrinterProfile.h"
+
 @class POSWIFIManager;
-typedef void(^POSWIFIBlock)(BOOL isConnect);
-typedef void(^POSWIFICallBackBlock)(NSData *data);
-enum {
-    SocketOfflineByServer,// 服务器掉线，默认为0
-    SocketOfflineByUser,  // 用户主动cut
-};
-
-
 @protocol POSWIFIManagerDelegate <NSObject>
-
-/// Successfully connected to the host
-/// @param managerWiFi connection object management
-/// @param host ip address
-/// @param port The port number
-- (void)POSWIFIManager:(POSWIFIManager *)manager didConnectedToHost:(NSString *)host port:(UInt16)port;
-/// Disconnect
-/// @param manager WiFi connection object management
-/// @param error error
-- (void)POSWIFIManager:(POSWIFIManager *)manager willDisconnectWithError:(NSError *)error;
-// Data written successfully
-- (void)POSWIFIManager:(POSWIFIManager *)manager didWriteDataWithTag:(long)tag;
-/// Receive the data returned by the printer
-/// @param manager Management object
-/// @param data Returned data
-/// @param tag tag
-- (void)POSWIFIManager:(POSWIFIManager *)manager didReadData:(NSData *)data tag:(long)tag;
-// 断开连接
-- (void)POSWIFIManagerDidDisconnected:(POSWIFIManager *)manager;
+@optional
+/**
+ * connect success
+ */
+- (void)POSwifiConnectedToHost:(NSString *)host port:(UInt16)port;
+/**
+ * disconnect error
+ */
+- (void)POSwifiDisconnectWithError:(NSError *)error;
+/**
+ * send data success
+ */
+- (void)POSwifiWriteValueWithTag:(long)tag;
+/**
+ * receive printer data
+ */
+- (void)POSwifiReceiveValueForData:(NSData *)data;
 @end
 
+/**********************************************************************/
+
+typedef void (^POSWIFIManagerReceiveBlock)(NSData *data);
+typedef void (^POSWIFIManagerWriteBlock)(BOOL success, NSError *error);
+typedef void (^POSWiFiPrinterStatusBlock)(NSData *status);
+typedef void (^POSWiFiPrinterSNBlock)(NSString *sn);
+typedef void (^POSWiFiPrinterCheckBlock)(NSData *check);
+@class PrinterProfile;
+typedef void (^POSWiFiManagerFoundPrinterBlock)(PrinterProfile *foundPrinter);
+
+/**********************************************************************/
+
 @interface POSWIFIManager : NSObject
-{
-    int commandSendMode; //命令发送模式 0:立即发送 1：批量发送
-}
-#pragma mark - 基本属性
-// 主机地址
-@property (nonatomic,copy) NSString *hostStr;
-// 端口
-@property (nonatomic,assign) UInt16 port;
-// 是否连接成功
-@property (nonatomic,assign) BOOL connectOK;
-// 是自动断开连接 还是 手动断开
-@property (nonatomic,assign) BOOL isAutoDisconnect;
+// host
+@property (nonatomic, copy) NSString *hostStr;
+// port
+@property (nonatomic, assign) UInt16 port;
+// whether connect
+@property (nonatomic, assign) BOOL isConnect;
 
-@property (nonatomic,weak) id<POSWIFIManagerDelegate> delegate;
-// 连接回调
-@property (nonatomic,copy) POSWIFIBlock callBack;
-// 接收服务端返回的数据
-@property (nonatomic,copy) POSWIFICallBackBlock callBackBlock;
-@property (nonatomic,strong) NSMutableArray *commandBuffer;
-//发送队列数组
-#pragma mark - 基本方法
-+ (instancetype)shareWifiManager;
-//连接主机
--(void)POSConnectWithHost:(NSString *)hostStr port:(UInt16)port completion:(POSWIFIBlock)block;
-// 断开主机
-- (void)POSDisConnect;
+@property (nonatomic, weak) id<POSWIFIManagerDelegate> delegate;
 
-//修改版本的推荐使用发送数据的两个方法
--(void)POSWriteCommandWithData:(NSData *)data;
+@property (nonatomic, copy) POSWIFIManagerReceiveBlock receiveBlock;
+@property (nonatomic, copy) POSWIFIManagerWriteBlock writeBlock;
 
--(void)POSWriteCommandWithData:(NSData *)data withResponse:(POSWIFICallBackBlock)block;
+@property (nonatomic, copy) POSWiFiManagerFoundPrinterBlock foundPrinterBlock;
+@property (nonatomic, copy) POSWiFiPrinterStatusBlock statusBlock;
+@property (nonatomic, copy) POSWiFiPrinterSNBlock snBlock;
+@property (nonatomic, copy) POSWiFiPrinterCheckBlock checkBlock;
 
-// 发送TSC完整指令
-- (void)POSSendMSGWith:(NSString *)str;
+@property (nonatomic, strong) PrinterProfile *connectedPrinter;
 
-
-- (void)POSSetCommandMode:(BOOL)Mode;
-
-
--(NSArray*)POSGetBuffer;
-/*
- * 75.返回等待发送指令队列
+/**
+ *  singleton
  */
++ (instancetype)sharedInstance;
 
--(void)POSClearBuffer;
-/*
- * 76.清空等待发送指令队列
+/**
+ *  remove a delegate
  */
+- (void)removeDelegate:(id<POSWIFIManagerDelegate>) delegate;
 
--(void)POSSendCommandBuffer;
-/*
- * 77.发送指令队列
+/**
+ *  remove all delegates
  */
+- (void)removeAllDelegates;
 
+/**
+ *  connect printer address
+ */
+- (void)connectWithHost:(NSString *)hostStr port:(UInt16)port;
+
+/**
+ *  disconnect
+ */
+- (void)disconnect;
+
+/**
+ *  write command to printer
+ */
+- (void)writeCommandWithData:(NSData *)data;
+
+/**
+ *  write command to printer with receive callback
+ */
+- (void)writeCommandWithData:(NSData *)data receiveCallBack:(POSWIFIManagerReceiveBlock)receiveBlock;
+
+/**
+ *  write command to printer with write callback
+ */
+- (void)writeCommandWithData:(NSData *)data writeCallBack:(POSWIFIManagerWriteBlock)receiveBlock;
+
+/**
+ * udp socket create
+ */
+- (BOOL)createUdpSocket;
+
+/**
+ * udp socket close
+ */
+- (void)closeUdpSocket;
+
+/**
+ * search printers
+ */
+- (void)sendFindCmd:(POSWiFiManagerFoundPrinterBlock)foundPrinterBlock;
+
+/**
+ * set ip configuration
+ */
+- (void)setIPConfigWithIP:(NSString *)ip Mask:(NSString *)mask Gateway:(NSString *)gateway DHCP:(BOOL)dhcp;
+
+/**
+ * set wifi configuration
+ */
+- (void)setWiFiConfigWithIP:(NSString *)ip mask:(NSString *)mask gateway:(NSString *)gateway ssid:(NSString *)ssid password:(NSString *)password encrypt:(NSUInteger)encrypt;
+
+/**
+ * check connect status
+ */
+- (BOOL)printerIsConnect;
+
+/**
+ * printer sn code
+ */
+- (void)printerSN:(POSWiFiPrinterSNBlock)snBlock;
+
+/**
+ * connect printer address with mac address
+ */
+- (void)connectWithMac:(NSString *)macStr;
+
+
+/**
+ *  get copyright
+ */
++ (NSString *)GetCopyRight;
+
+/**
+ * printer status
+ * 查询当前打印机常用状态（正常/缺纸/开盖等）
+ */
+- (void)printerStatus:(POSWiFiPrinterStatusBlock)statusBlock;
+
+/**
+ * printer check
+ * 这个方法用于查询打印机所有状态
+ * type = 1 打印机状态 type = 2 脱机状态 type = 3 错误状态 type = 4 传送纸状态
+ */
+- (void)printerCheck:(int)type checkBlock:(POSWiFiPrinterCheckBlock)checkBlock;
 
 @end

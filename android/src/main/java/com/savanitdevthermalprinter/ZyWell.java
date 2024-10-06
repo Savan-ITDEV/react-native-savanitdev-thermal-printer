@@ -58,8 +58,6 @@ public class ZyWell extends ReactContextBaseJavaModule {
         return NAME;
     }
 
-
-
     ServiceConnection mSerconnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -145,11 +143,8 @@ public class ZyWell extends ReactContextBaseJavaModule {
         }
     }
 
-
-
     // multiple connection
     private void AddPrinter(PosPrinterDev.PrinterInfo printer, Promise promise) {
-
         myZyWell.AddPrinter(printer, new TaskCallback() {
             @Override
             public void OnSucceed() {
