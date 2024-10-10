@@ -258,6 +258,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 @Override
                 public void OnFailed() {
                     promise.reject("ERROR", "PRINT_FAIL");
+
                     // disConnectNet(promise);
                 }
             }, new ProcessData() {
@@ -328,6 +329,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void ClearBuffer(Promise promise) {
         if (ISCONNECT == true) {
+            myBinder.OnDiscovery(PosPrinterDev.PortType.Ethernet,context);
             myBinder.ClearBuffer();
             promise.resolve("true");
         } else {

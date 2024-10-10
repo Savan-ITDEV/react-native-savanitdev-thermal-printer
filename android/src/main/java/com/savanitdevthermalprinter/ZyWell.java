@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -134,7 +135,6 @@ public class ZyWell extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void isOnline(String address,int timeout, Promise promise) {
-
         if (address != null) {
             boolean isConnected = pingHost(address,timeout);
             promise.resolve(isConnected);
@@ -162,7 +162,8 @@ public class ZyWell extends ReactContextBaseJavaModule {
         });
     }
     @ReactMethod
-    public void disconnectMultiZyWell(String printerName, Promise promise) {
+    public void disconnectMultiZyWell(String printerName, Promise promise)
+    {
         if (printerName != null) {
 
             boolean isValidate = findPrinterByName(printerName);
@@ -484,11 +485,22 @@ public class ZyWell extends ReactContextBaseJavaModule {
             }
         });
     }
+
     @ReactMethod
-    public void clearBuffer(Promise promise) {
+    public void clearBufferZyWell(Promise promise) {
         try {
+            myZyWell.OnDiscovery(PosPrinterDev.PortType.Ethernet,context);
             myZyWell.ClearBuffer();
             promise.resolve("true");
+        } catch (Exception e) {
+            promise.reject("ERROR",e.toString());
+        }
+    }
+    @ReactMethod
+    public void getPrinterStatusSGZyWell(Promise promise) {
+        try {
+            String status = String.valueOf(myZyWell.GetPrinterStatus());
+            promise.resolve(status);
         } catch (Exception e) {
             promise.reject("ERROR",e.toString());
         }
@@ -550,22 +562,13 @@ public class ZyWell extends ReactContextBaseJavaModule {
     }
     @ReactMethod
     public void printImgWithTimeoutZyWell(String base64String, int page, boolean isCut, int width, int cutCount,
-                                          int timeout, Promise promise) {
+                                          Promise promise) {
         final Bitmap bitmap1 = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), width);
         final Bitmap bitmapToPrint =   convertGreyImg(bitmap1);
         myZyWell.WriteSendData(new TaskCallback() {
             @Override
             public void OnSucceed() {
                 promise.resolve("SEND_SUCCESS");
-                TimerTask task = new TimerTask() {
-                    @Override
-                    public void run() {
-                        disConnectZyWell(promise);
-                    }
-                };
-                Timer timer = new Timer();
-                timer.schedule(task, timeout);
-
             }
 
             @Override
@@ -688,6 +691,8 @@ public class ZyWell extends ReactContextBaseJavaModule {
         mBitmap.setPixels(pixels, 0, width, 0, 0, width, height);
         return mBitmap;
     }
+
+
 
 //    @ReactMethod
 //    public void restartPrinter() {

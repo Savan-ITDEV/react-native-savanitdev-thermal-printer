@@ -494,6 +494,13 @@ export const startPrinterDiscovery = async (timeout = 5000) => {
 
 // --------------- Lib ZyWell printer new function // ---------------
 
+export function getPrinterStatusSGZyWell(): Promise<string> {
+  if (Platform.OS === "android") {
+    return ZyWell.getPrinterStatusSGZyWell();
+  } else {
+    // return ZyWell.connectNetZyWell(ip);
+  }
+}
 export function connectNetZyWell(ip: string): Promise<string> {
   if (Platform.OS === "android") {
     return ZyWell.connectNetZyWell(ip);
@@ -566,24 +573,30 @@ export function printImgWithTimeoutZyWell(
   page = 80,
   isCut: number,
   width: number,
-  cutCount: number,
-  timeout = 4000
+  cutCount: number
 ): Promise<string> {
   if (Platform.OS === "android") {
     return ZyWell.printImgWithTimeoutZyWell(
       base64String,
       page,
-      width,
       isCut,
       width,
-      cutCount,
-      timeout
+      cutCount
     );
   } else {
     // return ZyWell.connectUSBZyWell(ip);
   }
 }
 
+// ZyWell multiple connection
+export async function clearBufferZyWell(): Promise<string> {
+  if (Platform.OS === "android") {
+    return await ZyWell.clearBufferZyWell();
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
 // ZyWell multiple connection
 export async function getPrinterStatusMultiZyWell(
   printerName: string
@@ -599,7 +612,7 @@ export async function disconnectMultiZyWell(
   printerName: string
 ): Promise<string> {
   if (Platform.OS === "android") {
-    return await SavanitdevThermalPrinter.removeMulti(printerName);
+    return await ZyWell.disconnectMultiZyWell(printerName);
   } else {
     // IP just required for IOS
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
