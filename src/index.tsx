@@ -80,6 +80,28 @@ export function connectUSB(usbAddress: string): Promise<string> {
   }
 }
 
+export function printImgWithTimeout(
+  base64String: string,
+  page = 80,
+  isCut: boolean,
+  width: number,
+  cutCount: number,
+  timeout = 4000
+): Promise<string> {
+  if (Platform.OS === "android") {
+    return SavanitdevThermalPrinter.printImgWithTimeout(
+      base64String,
+      page,
+      isCut,
+      width,
+      cutCount,
+      timeout
+    );
+  } else {
+    // return ZyWell.connectUSBZyWell(ip);
+  }
+}
+
 export async function printImgNet(
   ip: string,
   img: string,
@@ -516,7 +538,7 @@ export function printRawZyWell(encode: string): Promise<string> {
 }
 export function restartPrinter(): Promise<string> {
   if (Platform.OS === "android") {
-    return ZyWell.restartPrinter();
+    return SavanitdevThermalPrinter.restartPrinter();
   } else {
     // return ZyWell.connectUSBZyWell(ip);
   }

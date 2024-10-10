@@ -244,6 +244,24 @@ public class Xprinter extends ReactContextBaseJavaModule {
         });
     }
     @ReactMethod
+    public void restartPrinter(String address, Promise promise) {
+        try {
+            IDeviceConnection connection = connections.get(address);
+            if (connection != null && connection.isConnect()) {
+                POSPrinter printer = new POSPrinter(connection);
+                byte[] bytes = new byte[]{27, 115, 66, 69, -110, -102, 1, 0, 95, 10};
+                printer.sendData(bytes);
+                statusXprinter(printer,promise);
+            } else {
+                promise.reject("ERROR", "DISCONNECT");
+            }
+
+        } catch (Exception e) {
+            promise.reject("ERROR", e.toString());
+        }
+    }
+
+    @ReactMethod
     public void printRawDataESC(String address, String encode, Promise promise) {
         try {
             IDeviceConnection connection = connections.get(address);

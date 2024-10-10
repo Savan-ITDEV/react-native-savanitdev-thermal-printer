@@ -233,7 +233,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    private void printImgWithTimeout(String base64String, int size, boolean isCutPaper, int width, int cutCount,
+    private void printImgWithTimeout(String base64String, int page, boolean isCutPaper, int width, int cutCount,
                                      int timeout, Promise promise) {
 
         if (ISCONNECT) {
@@ -264,7 +264,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                 @Override
                 public List<byte[]> processDataBeforeSend() {
                     List<byte[]> list = new ArrayList<>();
-                    if (size == 58) {
+                    if (page == 58) {
                         list.add(DataForSendToPrinterPos58.initializePrinter());
                     } else {
                         list.add(DataForSendToPrinterPos80.initializePrinter());
@@ -272,7 +272,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                     List<Bitmap> blist = new ArrayList<>();
                     blist = BitmapProcess.cutBitmap(cutCount, bitmapToPrint);
                     for (int i = 0; i < blist.size(); i++) {
-                        if (size == 58) {
+                        if (page == 58) {
                             list.add(DataForSendToPrinterPos58.printRasterBmp(
                                     0, blist.get(i), BitmapToByteData.BmpType.Dithering,
                                     BitmapToByteData.AlignType.Left, width));
@@ -283,13 +283,13 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
                         }
                     }
 
-                    if (size == 58 && isCutPaper) {
+                    if (page == 58 && isCutPaper) {
                         list.add(DataForSendToPrinterPos58.printAndFeedLine());
                     } else if (isCutPaper) {
                         list.add(DataForSendToPrinterPos80.printAndFeedLine());
                     }
 
-                    if (size == 80 && isCutPaper) {
+                    if (page == 80 && isCutPaper) {
                         list.add(
                                 DataForSendToPrinterPos80.selectCutPagerModerAndCutPager(
                                         0x42, 0x66));
@@ -920,7 +920,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getEncode(String base64String) {
+    public void setEncode(String base64String) {
         byte[] bytes = Base64.decode(base64String, Base64.DEFAULT);
         setPrinter.add(bytes);
     }

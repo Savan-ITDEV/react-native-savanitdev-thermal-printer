@@ -45,7 +45,8 @@ var connectedPrinterBTList: [POSBLEManager] = []
  var centralManager: CBCentralManager!
  var addressCurrent = "";
  var btManager: POSBLEManager!
-    var statusBLE :Bool=false
+ var statusBLE :Bool=false
+ var setPrinter = Data();
     // Usage:
     let printerManager = PrinterManager()
  
@@ -370,13 +371,21 @@ var connectedPrinterBTList: [POSBLEManager] = []
     func printImgESC(_ ip :String,base64String :String,width : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         if let printer = printerManager.getPrinter(id: ip)
         {
-            if let imageData = Data(base64Encoded: base64String) {
-                if UIImage(data: imageData) != nil {
-                    printer.writeCommand(with: imageData)
+            if let imageData = imageCompressForWidthScale(imagePath: base64String, targetWidth: CGFloat(width)) {
+//                if let image = UIImage(data: imageData) {
+//                    let img = self.monoImg(image: image, threshold: 0.1)
+                    let align:Data=POSCommand.selectAlignment(1);
+                    let Hight :Data=POSCommand.printAndFeedLine();
+                    let imgData:Data=POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: imageData, andType: Dithering);
+                    let cut:Data=POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
+                      let spaceH1 = Data("    ".utf8);
+                       let spaceH2 = Data("    ".utf8);
+                    let concatenatedData = align + imgData + cut + spaceH1 + spaceH2 + Hight
+                    printer.writeCommand(with: concatenatedData)
                     resolver("SUCCESS")
-                }else{
-                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
-                }
+//                }else{
+//                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
+//                }
             }else{
                 rejecter("ERROR","ENCODE_ERORR",nil)
             }
@@ -386,6 +395,113 @@ var connectedPrinterBTList: [POSBLEManager] = []
      
     }
     
+    func imageCompressForWidthScale(imagePath: String, targetWidth: CGFloat) -> UIImage? {
+         let imageData = Data(base64Encoded: imagePath)
+            // Load UIImage from imagePath
+        guard let image = UIImage(data: imageData!) else {
+                print("Failed to load image from base64String: \(imageData)")
+                return nil
+            }
+            
+            // Convert to grayscale and black & white
+            guard let sourceImage = convertToGrayScaleWithBlackAndWhite(sourceImage: image) else {
+                print("Failed to convert image to grayscale/black-and-white.")
+                return nil
+            }
+            
+            let imageSize = sourceImage.size
+            let width = imageSize.width
+            let height = imageSize.height
+            let targetHeight = height / (width / targetWidth)
+            let size = CGSize(width: targetWidth, height: targetHeight)
+            
+            var scaleFactor: CGFloat = 0.0
+            var scaledWidth = targetWidth
+            var scaledHeight = targetHeight
+            var thumbnailPoint = CGPoint.zero
+            
+            if imageSize != size {
+                let widthFactor = targetWidth / width
+                let heightFactor = targetHeight / height
+                
+                if widthFactor > heightFactor {
+                    scaleFactor = widthFactor
+                } else {
+                    scaleFactor = heightFactor
+                }
+                
+                scaledWidth = width * scaleFactor
+                scaledHeight = height * scaleFactor
+                
+                if widthFactor > heightFactor {
+                    thumbnailPoint.y = (targetHeight - scaledHeight) * 0.5
+                } else if widthFactor < heightFactor {
+                    thumbnailPoint.x = (targetWidth - scaledWidth) * 0.5
+                }
+            }
+            
+            UIGraphicsBeginImageContext(size)
+            
+            var thumbnailRect = CGRect.zero
+            thumbnailRect.origin = thumbnailPoint
+            thumbnailRect.size.width = scaledWidth
+            thumbnailRect.size.height = scaledHeight
+            
+            sourceImage.draw(in: thumbnailRect)
+            
+            let newImage = UIGraphicsGetImageFromCurrentImageContext()
+            
+            if newImage == nil {
+                print("Failed to scale image")
+            }
+            UIGraphicsEndImageContext()
+            return newImage
+        
+        
+    }
+    
+    func convertToGrayScaleWithBlackAndWhite(sourceImage: UIImage?) -> UIImage? {
+        guard let sourceImage = sourceImage else {
+            print("Source image is nil")
+            return nil
+        }
+
+        let size = sourceImage.size
+        let rect = CGRect(x: 0, y: 0, width: size.width, height: size.height)
+
+        // Create a new image context with grayscale color space
+        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+
+        // Draw the image in grayscale
+        sourceImage.draw(in: rect, blendMode: .luminosity, alpha: 1.0)
+
+        // Get the grayscale image from the context
+        let grayImage = UIGraphicsGetImageFromCurrentImageContext()
+
+        // End the context
+        UIGraphicsEndImageContext()
+
+        // Convert the grayscale image to black and white
+        guard let cgGrayImage = grayImage?.cgImage else { return nil }
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+        guard let bitmapContext = CGContext(data: nil,
+                                            width: Int(size.width),
+                                            height: Int(size.height),
+                                            bitsPerComponent: 8,
+                                            bytesPerRow: Int(size.width),
+                                            space: colorSpace,
+                                            bitmapInfo: CGImageAlphaInfo.none.rawValue) else {
+            return nil
+        }
+
+        bitmapContext.draw(cgGrayImage, in: rect)
+        guard let bwImageRef = bitmapContext.makeImage() else { return nil }
+        
+        let bwImage = UIImage(cgImage: bwImageRef)
+
+        return bwImage
+    }
     @objc
     func printTestESC(_ ip :String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         connectResolve = resolver
@@ -666,6 +782,7 @@ var connectedPrinterBTList: [POSBLEManager] = []
             }
         }
     
+    
     @objc
        func sendConfigNet(_ ip:String,data : Data) -> Void   {
            if isValidIPAddress(ip) {
@@ -697,7 +814,173 @@ var connectedPrinterBTList: [POSBLEManager] = []
         
         return true
     }
+  
+    @objc
+    func printTemplate(_ ip:String,isDisconnect:Bool,resolver resolve : @escaping RCTPromiseResolveBlock,
+                       rejecter reject: @escaping RCTPromiseRejectBlock) -> Void   {
+        connectResolve = resolve
+        connectReject = reject
+        self.sendConfigNet(ip,data: self.setPrinter)
+    }
+    
+    @objc
+     func clearPaper(_ resolve :  @escaping RCTPromiseResolveBlock,
+                     rejecter reject: @escaping RCTPromiseRejectBlock) {
+         self.setPrinter.removeAll();
+         resolve("CLEAR_DONE");
+    }
+    @objc
+    func initializeText() {
+        let body: Data = POSCommand.initializePrinter();
+        self.setPrinter.append(body)
+        }
+    @objc
+       func cut() {
+         let cut: Data = POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1)
+           self.setPrinter.append(cut)
+        }
+    @objc
+       func printAndFeedLine() {
+         let body: Data = POSCommand.printAndFeedLine()
+           self.setPrinter.append(body)
+        }
+    @objc
+         func CancelChineseCharModel() {
+             let body: Data = POSCommand.cancelChineseCharModel()
+             self.setPrinter.append(body)
+        }
+    @objc
+        func selectAlignment(_ n :Int) {
+         
+            let  data :Data = POSCommand.selectAlignment(Int32(n))
+                self.setPrinter.append(data)
+        
+        }
+    @objc
+       func text(_ txt :String,ch:String) {
+           let bytes =  strToBytes(txt, charset: ch);
+           let body = Data(bytes!);
+           self.setPrinter.append(body)
+       }
+        @objc
+        func selectCharacterSize(_ n :Int) {
+           
+                let  data :Data = POSCommand.selectCharacterSize(Int32(n))
+                self.setPrinter.append(data)
+            
+        }
+     @objc
+     func selectOrCancelBoldModel(_ n :Int) {
+         let  data :Data = POSCommand.selectOrCancleBoldModel(Int32(n))
+                self.setPrinter.append(data)
+            
+        }
+        @objc
+     func selectCharacterCodePage(_ n :Int) {
+                let  data :Data = POSCommand.selectCharacterCodePage(Int32(n))
+                self.setPrinter.append(data)
+            
+        }
+     @objc
+    func selectInternationalCharacterSets(_ n :Int) {
+           
+                let  data :Data = POSCommand.selectInternationCharacterSets(Int32(n))
+                self.setPrinter.append(data)
+            
+     }
+     @objc
+    func setAbsolutePrintPosition(_ n :Int, m :Int) {
+            let  data :Data = POSCommand.setAbsolutePrintPositionWithNL(Int32(n), andNH: Int32(m))
+        self.setPrinter.append(data)
+    }
+        @objc
+         func setEncode(_ base64String :String)   {
+             if let data = Data(base64Encoded: base64String) {
+                 self.setPrinter.append(data)
+                 }
+           }
+    @objc
+     func setImg(_ base64String :String)   {
+         guard let imageData = Data(base64Encoded: base64String) else {
+                 print("Failed to decode base64 string into data.")
+               
+                 return
+             }
+             guard let image = UIImage(data: imageData) else {
+                 print("Failed to create UIImage from data.")
+               
+                 return
+             }
+        let  data :Data = POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: image, andType: Dithering)
+         self.setPrinter.append(data)
+       }
+    
+    @objc
+     func line(_ length :Int) {
+         // Create a string with the specified length filled with "."
+               let line = String(repeating: ".", count: length)
+               // Convert the string to bytes using the existing method
+               if let lineBytes = strToBytes(line, charset: "utf-8") {
+                   // Carriage return and line feed bytes
+                   let newline: [UInt8] = [13, 10] // CR LF
+                   let mergedBytes = byteMerger(byte1: lineBytes, byte2: newline)
+                   let data = NSData(bytes: mergedBytes, length: mergedBytes.count)
+                   self.setPrinter.append(data as Data)
+               }
+      }
+      @objc
+       func line2(_ length :Int) {
+         // Create a string with the specified length filled with "."
+               let line = String(repeating: "-", count: length)
+               // Convert the string to bytes using the existing method
+               if let lineBytes = strToBytes(line, charset: "utf-8") {
+                   // Carriage return and line feed bytes
+                   let newline: [UInt8] = [13, 10] // CR LF
+                   let mergedBytes = byteMerger(byte1: lineBytes, byte2: newline)
+                   let data = NSData(bytes: mergedBytes, length: mergedBytes.count)
+                   self.setPrinter.append(data as Data)
+               }
+      }
+      @objc
+         func line3(_ length :Int) {
+         // Create a string with the specified length filled with "."
+               let line = String(repeating: "=", count: length)
+               // Convert the string to bytes using the existing method
+               if let lineBytes = strToBytes(line, charset: "utf-8") {
+                   // Carriage return and line feed bytes
+                   let newline: [UInt8] = [13, 10] // CR LF
+                   let mergedBytes = byteMerger(byte1: lineBytes, byte2: newline)
+                   let data = NSData(bytes: mergedBytes, length: mergedBytes.count)
+                   self.setPrinter.append(data as Data)
+               }
+      }
+    
+    
+    func strToBytes(_ str: String, charset: String) -> [UInt8]? {
+           var data: [UInt8]? = nil
+
+           // Convert the string to UTF-8 data
+           if let utf8Data = str.data(using: .utf8) {
+               // Convert the UTF-8 data back to a string
+               if let utf8String = String(data: utf8Data, encoding: .utf8) {
+                   // Convert the string to data with the specified charset
+                   if let finalData = utf8String.data(using: String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringConvertIANACharSetNameToEncoding(charset as CFString)))) {
+                       // Convert the final data to a byte array
+                       data = [UInt8](finalData)
+                   }
+               }
+           }
+
+           return data
+       }
+    
+    
 }
+
+
+
+
+
 
 
 // status this work with poSbleReceiveValue

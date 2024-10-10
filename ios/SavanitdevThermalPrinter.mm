@@ -74,6 +74,28 @@ RCT_EXTERN_METHOD(getLangModel:(NSString *)ip)
 RCT_EXTERN_METHOD(printLangPrinter:(NSString *)ip)
 RCT_EXTERN_METHOD(cancelChinese:(NSString *)ip)
 
+
+RCT_EXTERN_METHOD(clearPaper:(RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(initializeText)
+RCT_EXTERN_METHOD(cut)
+RCT_EXTERN_METHOD(printAndFeedLine)
+RCT_EXTERN_METHOD(selectAlignment:(NSInteger *)n)
+RCT_EXTERN_METHOD(text:(NSString *)txt ch:(NSString *)ch)
+RCT_EXTERN_METHOD(selectCharacterSize:(NSString *)n)
+RCT_EXTERN_METHOD(selectOrCancelBoldModel:(NSInteger *)n)
+RCT_EXTERN_METHOD(selectCharacterCodePage:(NSInteger *)n)
+RCT_EXTERN_METHOD(selectInternationalCharacterSets:(NSInteger *)n)
+RCT_EXTERN_METHOD(setAbsolutePrintPosition:(NSInteger *)n m:(NSInteger *)m)
+RCT_EXTERN_METHOD(setImg:(NSString *)base64String)
+RCT_EXTERN_METHOD(setEncode:(NSString *)base64String)
+RCT_EXTERN_METHOD(line:(NSInteger *)length)
+RCT_EXTERN_METHOD(line2:(NSInteger *)length)
+RCT_EXTERN_METHOD(line3:(NSInteger *)length)
+RCT_EXTERN_METHOD(printTemplate:(NSString *)ip isDisconnect:(BOOL *)isDisconnect
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup
 {
   return NO;

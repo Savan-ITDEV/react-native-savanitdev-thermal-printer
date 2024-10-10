@@ -222,7 +222,10 @@ public class ZyWell extends ReactContextBaseJavaModule {
     }
 
     public static Bitmap decodeBase64ToBitmap(String base64String) {
-        byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
+        byte[] decodedBytes = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.FROYO) {
+            decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
+        }
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
     }
     @ReactMethod
@@ -271,7 +274,11 @@ public class ZyWell extends ReactContextBaseJavaModule {
             boolean isValidate = findPrinterByName(printerName);
             // Log.e("isValidate", String.valueOf(isValidate));
             if (isValidate) {
-                byte[] bytes = Base64.decode(base64String, Base64.DEFAULT);
+                byte[] bytes = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.FROYO) {
+                    bytes = Base64.decode(base64String, Base64.DEFAULT);
+                }
+                byte[] finalBytes = bytes;
                 myZyWell.SendDataToPrinter(printerName, new TaskCallback() {
                     @Override
                     public void OnSucceed() {
@@ -286,7 +293,7 @@ public class ZyWell extends ReactContextBaseJavaModule {
                     @Override
                     public List<byte[]> processDataBeforeSend() {
                         List<byte[]> list = new ArrayList<>();
-                        list.add(bytes);
+                        list.add(finalBytes);
                         return list;
                     }
                 });
@@ -498,7 +505,10 @@ public class ZyWell extends ReactContextBaseJavaModule {
     }
     @ReactMethod
     public void printRawZyWell(String encode, Promise promise) {
-        byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+        byte[] bytes = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.FROYO) {
+            bytes = Base64.decode(encode, Base64.DEFAULT);
+        }
         myZyWell.Write(bytes, new TaskCallback() {
             @Override
             public void OnSucceed() {
@@ -678,4 +688,9 @@ public class ZyWell extends ReactContextBaseJavaModule {
         mBitmap.setPixels(pixels, 0, width, 0, 0, width, height);
         return mBitmap;
     }
+
+//    @ReactMethod
+//    public void restartPrinter() {
+//        sendDataToPrinter(new byte[]{27, 115, 66, 69, -110, -102, 1, 0, 95, 10});
+//    }
 }
