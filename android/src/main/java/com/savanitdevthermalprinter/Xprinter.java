@@ -125,13 +125,15 @@ public class Xprinter extends ReactContextBaseJavaModule {
             IDeviceConnection connection = connections.get(address);
             if (connection != null) {
                 if (connection.isConnect()) {
+                    final Bitmap bitmapToPrint = convertGreyImg(decodeBase64ToBitmap(base64String));
                     ZPLPrinter printer = new ZPLPrinter(connection);
                     printer.addStart()
-                             .downloadBitmap(width, "SAMPLE.GRF", decodeBase64ToBitmap(base64String))
+                             .downloadBitmap(width, "SAMPLE.GRF", bitmapToPrint)
                              .addBitmap(x, y, "SAMPLE.GRF")
                              .addPrintCount(printCount)
                              .addEnd();
-                    promise.resolve("SUCCESS");
+
+                    statusZPL(printer,connection,promise);
                 } else {
                     promise.reject("ERROR", "DISCONNECT");
                 }
@@ -198,8 +200,9 @@ public class Xprinter extends ReactContextBaseJavaModule {
             promise.reject("ERROR", e.toString());
         }
     }
-    public void statusXprinter(POSPrinter printer, Promise promise) {
-
+    public void statusZPL(ZPLPrinter printer, IDeviceConnection connection, Promise promise) {
+         try{
+        int type = connection.getConnectType();
         printer.printerStatus(status -> {
             // Handle the received status here
             String msg;
@@ -229,7 +232,11 @@ public class Xprinter extends ReactContextBaseJavaModule {
                     if(status > 0 ){
                         promise.resolve(msg);
                     }else if(status == -4){
-                        promise.resolve(msg);
+                        if(type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH){
+                            promise.reject("ERROR", "PRINT_FAIL");
+                        }else{
+                            promise.resolve(msg);
+                        }
                     }
                     else{
                         promise.reject("ERROR", "PRINT_FAIL");
@@ -242,6 +249,56 @@ public class Xprinter extends ReactContextBaseJavaModule {
 
             // You can now display the message
         });
+        } catch (Exception e){
+            promise.reject("ERROR", e.toString());
+     }
+    }
+    public void statusXprinter(POSPrinter printer, IDeviceConnection connection, Promise promise) {
+        int type = connection.getConnectType();
+        printer.printerStatus(status -> {
+            // Handle the received status here
+            String msg;
+            switch (status) {
+                case 0:
+                    msg = "STS_NORMAL";
+                    promise.resolve(msg);
+                    break;
+                case 8:
+                    msg = "STS_COVEROPEN";
+                    promise.resolve(msg);
+                    break;
+                case 16:
+                    msg = "STS_PAPEREMPTY";
+                    promise.resolve(msg);
+                    break;
+                case 32:
+                    msg = "STS_PRESS_FEED";
+                    promise.resolve(msg);
+                    break;
+                case 64:
+                    promise.reject("ERROR", "PRINT_FAIL");
+                    msg = "Printer error";
+                    break;
+                default:
+                    msg = "UNKNOWN";
+                    if(status > 0 ){
+                        promise.resolve(msg);
+                    }else if(status == -4){
+                        if(type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH){
+                            promise.reject("ERROR", "PRINT_FAIL");
+                        }else{
+                            promise.resolve(msg);
+                        }
+                    }
+                    else{
+                        promise.reject("ERROR", "PRINT_FAIL");
+                    }
+                    Log.e("STATUS PRINT", String.valueOf(status));
+//                    promise.reject("ERROR", "PRINT_FAIL");
+                    break;
+            }
+            // You can now display the message
+        });
     }
     @ReactMethod
     public void restartPrinter(String address, Promise promise) {
@@ -251,7 +308,7 @@ public class Xprinter extends ReactContextBaseJavaModule {
                 POSPrinter printer = new POSPrinter(connection);
                 byte[] bytes = new byte[]{27, 115, 66, 69, -110, -102, 1, 0, 95, 10};
                 printer.sendData(bytes);
-                statusXprinter(printer,promise);
+                statusXprinter(printer,connection,promise);
             } else {
                 promise.reject("ERROR", "DISCONNECT");
             }
@@ -269,7 +326,7 @@ public class Xprinter extends ReactContextBaseJavaModule {
                 POSPrinter printer = new POSPrinter(connection);
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 printer.sendData(bytes);
-                statusXprinter(printer,promise);
+                statusXprinter(printer,connection,promise);
             } else {
                 promise.reject("ERROR", "DISCONNECT");
             }
@@ -286,9 +343,10 @@ public class Xprinter extends ReactContextBaseJavaModule {
             if (connection != null && connection.isConnect()) {
                         POSPrinter printer = new POSPrinter(connection);
                         Bitmap bmp = decodeBase64ToBitmap(base64String);
-                        printer.printBitmap(bmp, POSConst.ALIGNMENT_CENTER, width).cutHalfAndFeed(1);
+                        final Bitmap bitmapToPrint = convertGreyImg(bmp);
+                        printer.printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, width).cutHalfAndFeed(1);
 
-                    statusXprinter(printer,promise);
+                    statusXprinter(printer,connection,promise);
 
             }else {
                 promise.reject("ERROR", "GET_ID_FAIL");
@@ -438,8 +496,6 @@ public class Xprinter extends ReactContextBaseJavaModule {
         }
     }
 
-
-
     @ReactMethod
     public void cutESCX(String address, Promise promise) {
         try {
@@ -461,6 +517,7 @@ public class Xprinter extends ReactContextBaseJavaModule {
     }
 
     private void connectListener(String address, int code, Promise promise) {
+     try{
         IDeviceConnection connection = connections.get(address);
         if (connection != null && connection.isConnect()) {
 
@@ -472,10 +529,62 @@ public class Xprinter extends ReactContextBaseJavaModule {
                 // Reject the promise with an error
                 promise.reject("ERROR", "DISCONNECT");
             }
+            } catch (Exception e){
+            promise.reject("ERROR", e.toString());
+     }
+    }
+
+
+    public Bitmap convertGreyImg(Bitmap img) {
+        int width = img.getWidth();
+        int height = img.getHeight();
+
+        int[] pixels = new int[width * height];
+
+        img.getPixels(pixels, 0, width, 0, 0, width, height);
+
+        // The arithmetic average of a grayscale image; a threshold
+        double redSum = 0, greenSum = 0, blueSun = 0;
+        double total = width * height;
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                int grey = pixels[width * i + j];
+
+                int red = ((grey & 0x00FF0000) >> 16);
+                int green = ((grey & 0x0000FF00) >> 8);
+                int blue = (grey & 0x000000FF);
+
+                redSum += red;
+                greenSum += green;
+                blueSun += blue;
+            }
         }
+        int m = (int) (redSum / total);
 
+        // Conversion monochrome diagram
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                int grey = pixels[width * i + j];
 
+                int alpha1 = 0xFF << 24;
+                int red = ((grey & 0x00FF0000) >> 16);
+                int green = ((grey & 0x0000FF00) >> 8);
+                int blue = (grey & 0x000000FF);
 
+                if (red >= m) {
+                    red = green = blue = 255;
+                } else {
+                    red = green = blue = 0;
+                }
+                grey = alpha1 | (red << 16) | (green << 8) | blue;
+                pixels[width * i + j] = grey;
+            }
+        }
+        Bitmap mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        mBitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+        return mBitmap;
+    }
         
 
 }

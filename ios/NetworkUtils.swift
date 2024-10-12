@@ -50,61 +50,83 @@ func pingWithNWConnection(to host: String, port: UInt16 = 9100, resolver: @escap
 }
 
 @available(iOS 16.4, *)
-func scanDevicesInLocalNetwork(resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+func scanDevicesInLocalNetwork(timeout : UInt16 = 12,resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
     let startIP = 2
-     let endIP = 254
-      guard let localIP = getLocalIPAddress() else {
+       let endIP = 254
+       guard let localIP = getLocalIPAddress() else {
            print("Could not determine local IP address.")
            return
        }
-       
-       // Extract the base IP from the local IP (e.g., from 192.168.1.105 -> 192.168.1.)
+
        let baseIP = localIP.components(separatedBy: ".").dropLast().joined(separator: ".") + "."
        print("Scanning network with base IP: \(baseIP)")
-     
-     // Common ports for network devices
-     let ports: [UInt16] = [80, 9100]
-     
-     // Set to track found IPs
-     var foundIPs = Set<String>()
-     
-     let scanQueue = DispatchQueue(label: "scanQueue", qos: .background)
-     
-     for i in startIP...endIP {
-         let host = baseIP + String(i)
-         for port in ports {
-             let hostEndpoint = NWEndpoint.Host(host)
-             let portEndpoint = NWEndpoint.Port(rawValue: port)!
-             let options = NWProtocolTCP.Options()
-             options.connectionTimeout = 50
-             let params = NWParameters(tls: nil, tcp: options)
-             let connection = NWConnection(host: hostEndpoint, port: portEndpoint, using: params)
-             connection.stateUpdateHandler = { state in
-                 switch state {
-                 case .ready:
-                     // Only report the device if the IP hasn't been found yet
-                     if !foundIPs.contains(host) {
-                         print("Device found at: \(host)")
-                         foundIPs.insert(host)  // Mark IP as found
-                     }
-                     connection.cancel()
-                 case .failed(let error):
-                     if (error as? NWError)?.errorCode == 61 {
-                         // Connection refused is normal for devices not listening on this port
-                     } else {
-                         print("Failed to connect to \(host) on port \(port): \(error)")
-                     }
-                     connection.cancel()
-                 default:
-                     break
-                 }
-             }
-             
-             scanQueue.async {
-                 connection.start(queue: scanQueue)
-             }
-         }
-     }
+
+       let ports: [UInt16] = [80, 9100]
+       var foundIPs = Set<String>()
+       let scanQueue = DispatchQueue(label: "scanQueue", qos: .background)
+       let dispatchGroup = DispatchGroup()
+
+       for i in startIP...endIP {
+           let host = baseIP + String(i)
+           for port in ports {
+               guard let portEndpoint = NWEndpoint.Port(rawValue: port) else {
+                   print("Invalid port: \(port)")
+                   continue
+               }
+
+               let hostEndpoint = NWEndpoint.Host(host)
+               let options = NWProtocolTCP.Options()
+
+               let params = NWParameters(tls: nil, tcp: options)
+               let connection = NWConnection(host: hostEndpoint, port: portEndpoint, using: params)
+
+               // Call enter right before starting the connection
+               dispatchGroup.enter()
+
+               connection.stateUpdateHandler = { state in
+                   switch state {
+                   case .ready:
+                       if !foundIPs.contains(host) {
+                           print("Device found at: \(host)")
+                           foundIPs.insert(host)
+                       }
+                       connection.cancel()
+                   case .failed(let error):
+                       if (error as? NWError)?.errorCode == 61 {
+                           // Connection refused is normal for devices not listening on this port
+                       } else {
+                           print("Failed to connect to \(host) on port \(port): \(error)")
+                       }
+                       connection.cancel()
+                   case .cancelled, .waiting, .preparing:
+                       break
+                   default:
+                       break
+                   }
+
+                   // Ensure leave() is always called
+//
+               }
+
+               scanQueue.async {
+                   connection.start(queue: scanQueue)
+                   dispatchGroup.leave()
+               }
+           }
+       }
+
+       dispatchGroup.notify(queue: DispatchQueue.main) {
+           let timeoutInSeconds = timeout
+           DispatchQueue.main.asyncAfter(deadline: .now() + timeoutInSeconds) {
+               // Code to execute after the timeout
+               print("Timeout reached")
+               print("Scanning completed. Found devices: \(foundIPs)")
+               // Convert the Set to an Array
+               let ipAddressesArray = Array(foundIPs)
+               resolver(ipAddressesArray)
+           }
+           
+       }
    
 }
 // Helper function to get the local IP address of the device

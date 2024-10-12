@@ -32,7 +32,7 @@
 
 - support print WIFI,BTE and USB in one time
 
-<https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx>
+[![Watch the video](https://i.ibb.co/hHgBYQS/Screenshot-2024-10-12-at-10-06-45-PM.png)](https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx)
 
 ## Installation
 

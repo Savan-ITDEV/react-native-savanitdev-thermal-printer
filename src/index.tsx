@@ -254,11 +254,11 @@ export function checkStatusBLE(): Promise<string> {
     return SavanitdevThermalPrinter.checkStatusBLE("");
   }
 }
-export function disconnectBLE(): Promise<string> {
+export function disConnectBT(): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.disConnectBT();
   } else {
-    return SavanitdevThermalPrinter.disconnectBLE("");
+    return SavanitdevThermalPrinter.disConnectBT();
   }
 }
 
@@ -306,8 +306,8 @@ export function requestUSBPermission(): Promise<string> {
   }
 }
 
-export function getByteArrayList(): Promise<Object> {
-  return SavanitdevThermalPrinter.getByteArrayList()
+export function getEncodeText(): Promise<Object> {
+  return SavanitdevThermalPrinter.getEncodeText()
     .then((base64Strings: []) => {
       const byteArrayList = base64Strings.map(
         (base64) => Buffer.from(base64, "base64").toJSON().data
@@ -383,12 +383,13 @@ export function image64BaseBLE(
   base64String: string,
   w1: number,
   w2: number,
-  isCut: number
+  isCut: number,
+  isNormal = true
 ): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.printBitmapBLE(base64String, w1, w2, isCut);
   } else {
-    return SavanitdevThermalPrinter.image64BaseBLE(base64String);
+    return SavanitdevThermalPrinter.image64BaseBLE(base64String, isNormal);
   }
 }
 // BLEUTOOTH //
@@ -475,17 +476,13 @@ export function pingDevice(address: string, timeout = 4000): Promise<string> {
   if (Platform.OS === "android") {
     return SavanitdevThermalPrinter.pingDevice(address, timeout);
   } else {
-    // return SavanitdevThermalPrinter.readBuffer(address);
+    return SavanitdevThermalPrinter.pingDevice(address);
   }
 }
 
 export const startPrinterDiscovery = async (timeout = 5000) => {
   try {
-    const printers = await SavanitdevThermalPrinter.startQuickDiscovery(
-      timeout
-    );
-    console.log("Discovered printers: ", printers);
-    return printers;
+    return SavanitdevThermalPrinter.startQuickDiscovery(timeout);
   } catch (error) {
     console.error("Printer discovery failed: ", error);
     return [];
@@ -615,7 +612,7 @@ export async function disconnectMultiZyWell(
     return await ZyWell.disconnectMultiZyWell(printerName);
   } else {
     // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    return SavanitdevThermalPrinter.disconnectBLE();
   }
 }
 
@@ -628,7 +625,7 @@ export async function connectMultiZyWell(
     return await ZyWell.connectMultiZyWell(printerName, type);
   } else {
     // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    return await SavanitdevThermalPrinter.connectBLE(printerName);
   }
 }
 
@@ -655,6 +652,15 @@ export async function printImgMultiZyWell(
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
+export async function printRawText(printerName: string): Promise<string> {
+  if (Platform.OS === "android") {
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 700));
+    return await ZyWell.printRawText(printerName);
+  } else {
+    // IP just required for IOS
+    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+  }
+}
 export async function printRawDataMulti(
   printerName: string,
   base64String: string
@@ -662,8 +668,8 @@ export async function printRawDataMulti(
   if (Platform.OS === "android") {
     return await ZyWell.printRawDataMulti(printerName, base64String);
   } else {
-    // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 700));
+    return await SavanitdevThermalPrinter.rawDataBLE(base64String);
   }
 }
 export async function getPrinterInfoListMulti(): Promise<string> {
@@ -674,14 +680,15 @@ export async function getPrinterInfoListMulti(): Promise<string> {
     // return await SavanitdevThermalPrinter.getPrinterInfoList();
   }
 }
-export function printImgWithTimeoutMulti(
+export async function printImgWithTimeoutMulti(
   printerName: string,
   base64String: string,
   page = 80,
   isCut = true,
   width: number,
   cutCount: number,
-  timeout = 4000
+  timeout = 4000,
+  isNormal = true
 ): Promise<string> {
   if (Platform.OS === "android") {
     return ZyWell.printImgWithTimeoutMulti(
@@ -694,7 +701,11 @@ export function printImgWithTimeoutMulti(
       timeout
     );
   } else {
-    // return ZyWell.connectUSBZyWell(ip);
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
+    return await SavanitdevThermalPrinter.image64BaseBLE(
+      base64String,
+      isNormal
+    );
   }
 }
 export function printImgTSCZyWell(
@@ -735,7 +746,7 @@ export async function connectMultiXPrinter(
     return await XPrinter.connectMultiXPrinter(address, type);
   } else {
     // IP just required for IOS
-    // return await SavanitdevThermalPrinter.getPrinterInfoList();
+    return await SavanitdevThermalPrinter.connectNet(address);
   }
 }
 

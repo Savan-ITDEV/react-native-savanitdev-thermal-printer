@@ -4,7 +4,7 @@
 
 RCT_EXTERN_METHOD(initializePrinter)
 RCT_EXTERN_METHOD(startScanBLE)
-RCT_EXTERN_METHOD(startQuickDiscovery:(RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(startQuickDiscovery:(NSInteger *)timeout resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(connectNet:(NSString *)ip resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
@@ -54,8 +54,7 @@ RCT_EXTERN_METHOD(getStatus:(NSString *)ip resolver:(RCTPromiseResolveBlock)reso
 RCT_EXTERN_METHOD(getListDevice:(NSString *)id resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(disconnectBLE:(NSString *)id resolver: (RCTPromiseResolveBlock)resolve
-                  rejecter: (RCTPromiseRejectBlock)reject)
+
 
 RCT_EXTERN_METHOD(checkStatusBLE:(NSString *)id resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
@@ -65,7 +64,8 @@ RCT_EXTERN_METHOD(rawDataBLE:(NSString *)base64String resolver: (RCTPromiseResol
 
 
 
-RCT_EXTERN_METHOD(image64BaseBLE:(NSString *)base64String
+RCT_EXTERN_METHOD(image64BaseBLE:(NSString *)base64String 
+                  isNormal: (BOOL *)isNormal
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
@@ -74,9 +74,12 @@ RCT_EXTERN_METHOD(getLangModel:(NSString *)ip)
 RCT_EXTERN_METHOD(printLangPrinter:(NSString *)ip)
 RCT_EXTERN_METHOD(cancelChinese:(NSString *)ip)
 
+RCT_EXTERN_METHOD(disConnectBT:(RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(clearPaper:(RCTPromiseResolveBlock)resolve
-                  rejecter: (RCTPromiseRejectBlock)reject)
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(initializeText)
 RCT_EXTERN_METHOD(cut)
 RCT_EXTERN_METHOD(printAndFeedLine)

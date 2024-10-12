@@ -65,9 +65,9 @@ var connectedPrinterBTList: [POSBLEManager] = []
     }
     
     @objc
-    func startQuickDiscovery(_ resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    func startQuickDiscovery(_ timeout : UInt16 = 12, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         if #available(iOS 16.4, *) {
-            scanDevicesInLocalNetwork(resolver: resolver,rejecter: rejecter)
+            scanDevicesInLocalNetwork(timeout:Double(timeout) ,resolver: resolver,rejecter: rejecter)
         } else {
             // Fallback on earlier versions
         }
@@ -135,6 +135,7 @@ var connectedPrinterBTList: [POSBLEManager] = []
     }
     func poSbleConnect(_ peripheral: CBPeripheral!) {
         print("poSbleConnect ")
+        addressCurrent = peripheral.identifier.uuidString;
         connectResolve?("CONNECTED")
          connectResolve = nil
          connectReject = nil
@@ -142,6 +143,7 @@ var connectedPrinterBTList: [POSBLEManager] = []
     
     func poSbleFail(toConnect peripheral: CBPeripheral!, error: (any Error)!) {
         print("poSbleFail ")
+        addressCurrent = "";
         connectReject?("ERROR","BT_ERROR",nil)
         connectResolve = nil
         connectReject = nil
@@ -150,8 +152,9 @@ var connectedPrinterBTList: [POSBLEManager] = []
     func poSbleDisconnectPeripheral(_ peripheral: CBPeripheral!, error: (any Error)!) {
         self.btManager.startScan();
         print("poSbleDisconnectPeripheral ")
+        addressCurrent = "";
         self.btManager.disconnectRootPeripheral();
-        connectReject?("ERROR","DISCONNECT",nil)
+        connectResolve?("DISCONNECT")
         connectResolve = nil
         connectReject = nil
     }
@@ -296,20 +299,22 @@ var connectedPrinterBTList: [POSBLEManager] = []
     
    
     @objc
-    func printImgZPL(_ ip :String,base64String :String,width : Int,printCount :Int, x : Int,y : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    func printImgZPL(_ ip :String,base64String :String,width : Int, printCount :Int, x : Int,y : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
        
             if let imageData = Data(base64Encoded: base64String) {
                 if let image = UIImage(data: imageData) {
-                   
+                    let img = self.monoImg(image: image, threshold: 0.1)
                     var dataM = Data(ZPLCommand.xa())
                     dataM.append(ZPLCommand.setLabelWidth(Int32(width)))
-                    dataM.append(ZPLCommand.drawImageWithx(Int32(x), y: Int32(y), image: image))
+                    dataM.append(ZPLCommand.drawImageWithx(Int32(x), y: Int32(y), image: img!))
                     dataM.append(ZPLCommand.setPageCount(Int32(printCount)))
                     dataM.append(ZPLCommand.xz())
                     if let printer = printerManager.getPrinter(id: ip)
                     {
+                    connectResolve = resolver
+                    connectReject = rejecter
                     printer.writeCommand(with: dataM)
-                    resolver("SUCCESS")
+                
                     }else{
                     self.sendConfigNet(ip,data: dataM as Data)
                     }
@@ -343,7 +348,7 @@ var connectedPrinterBTList: [POSBLEManager] = []
             rejecter("ERROR","PRINT_ERROR",nil)
         }
        
-    } 
+    }
     @objc
     func printImgCPCL(_ ip :String,base64String :String,width : Int,height : Int, x : Int,y : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         if let printer = printerManager.getPrinter(id: ip)
@@ -371,21 +376,22 @@ var connectedPrinterBTList: [POSBLEManager] = []
     func printImgESC(_ ip :String,base64String :String,width : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         if let printer = printerManager.getPrinter(id: ip)
         {
-            if let imageData = imageCompressForWidthScale(imagePath: base64String, targetWidth: CGFloat(width)) {
-//                if let image = UIImage(data: imageData) {
-//                    let img = self.monoImg(image: image, threshold: 0.1)
+//            if let imageData = imageCompressForWidthScale(imagePath: base64String, targetWidth: CGFloat(width)) {
+            if  let imageData = Data(base64Encoded: base64String){
+                if let image = UIImage(data: imageData) {
+                    let img = self.monoImg(image: image, threshold: 0.1)
                     let align:Data=POSCommand.selectAlignment(1);
                     let Hight :Data=POSCommand.printAndFeedLine();
-                    let imgData:Data=POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: imageData, andType: Dithering);
+                    let imgData:Data=POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: img, andType: Dithering);
                     let cut:Data=POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
                       let spaceH1 = Data("    ".utf8);
                        let spaceH2 = Data("    ".utf8);
                     let concatenatedData = align + imgData + cut + spaceH1 + spaceH2 + Hight
                     printer.writeCommand(with: concatenatedData)
                     resolver("SUCCESS")
-//                }else{
-//                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
-//                }
+                }else{
+                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
+                }
             }else{
                 rejecter("ERROR","ENCODE_ERORR",nil)
             }
@@ -592,7 +598,12 @@ var connectedPrinterBTList: [POSBLEManager] = []
                 connectReject = rejecter
             if let peripheral = dataArr.first(where: { $0.identifier.uuidString == identifiers }){
              print("connectBLE ")
-                self.btManager.connectDevice(peripheral);
+                if(addressCurrent == peripheral.identifier.uuidString){
+                    resolver("CONNECTED")
+                }else{
+                    self.btManager.connectDevice(peripheral);
+                }
+              
 
             }else{
                 self.btManager.startScan();
@@ -602,21 +613,15 @@ var connectedPrinterBTList: [POSBLEManager] = []
     }
     
     @objc
-    func disConnectBLE(_ id :String, resolver resolve :  @escaping RCTPromiseResolveBlock,
-      rejecter reject: @escaping RCTPromiseRejectBlock) {
+    func disConnectBT(_ resolve :  @escaping RCTPromiseResolveBlock,
+                       rejecter reject: @escaping RCTPromiseRejectBlock) {
         if(self.statusBLE == true){
-            do {
-                try self.btManager.disconnectRootPeripheral();               
-                print("disconnect")
-                resolve("DISCONNECT")
-            } catch {
-               
-                print("Failed disconnect: \(error)")
-                reject("ERROR","DISCONNECT_FAIL", nil)
-            }
-        }else{
-            reject("ERROR","BT_NOT_ENABLE", nil)
-        }
+            connectResolve = resolve
+            connectReject = reject
+    self.btManager.disconnectRootPeripheral();
+               }else{
+                   reject("ERROR","BT_NOT_ENABLE", nil)
+               }
     }
     
     @objc
@@ -661,13 +666,28 @@ var connectedPrinterBTList: [POSBLEManager] = []
     }
     
     @objc
-    func image64BaseBLE(_ base64String :String, resolver resolve :  @escaping RCTPromiseResolveBlock,
+    func image64BaseBLE(_ base64String :String,isNormal :Bool, resolver resolve :  @escaping RCTPromiseResolveBlock,
                         rejecter reject: @escaping RCTPromiseRejectBlock) {
         if(self.statusBLE == true){
-            if let imageData = Data(base64Encoded: base64String) {
-                if UIImage(data: imageData) != nil {
-                     self.btManager.writeCommand(with: imageData)
-                    resolve("PRINT_DONE")
+            if  let imageData = Data(base64Encoded: base64String){
+                if let image = UIImage(data: imageData) {
+                    connectResolve = resolve
+                    connectReject = reject
+//                    let img = self.monoImg(image: image, threshold: 0.1)
+                    let align:Data=POSCommand.selectAlignment(1);
+                    let Hight :Data=POSCommand.printAndFeedLine();
+                    
+                    let convert :Data=POSCommand.compressionPrintBmp(withM: RasterNolmorWH, andImage:image, andType:Dithering)
+                    let imgData:Data=POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: image, andType: Dithering);
+                    
+                    let cut:Data=POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
+                    
+                      let spaceH1 = Data("    ".utf8);
+                       let spaceH2 = Data("    ".utf8);
+                    let imgConvert = isNormal ? imgData  : convert;
+                    let concatenatedData = align + imgConvert + cut + spaceH1 + spaceH2 + Hight
+                    self.btManager.writeCommand(with: concatenatedData)
+                  
                 }else{
                     reject("ERROR","CONVERT_IMG_ERROR",nil)
                 }

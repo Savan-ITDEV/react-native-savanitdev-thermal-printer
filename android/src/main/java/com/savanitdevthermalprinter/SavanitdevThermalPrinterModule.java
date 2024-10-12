@@ -41,6 +41,7 @@ import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.module.annotations.ReactModule;
 
 import java.io.IOException;
@@ -72,7 +73,7 @@ import zywell.posprinter.utils.RoundQueue;
 @ReactModule(name = SavanitdevThermalPrinterModule.NAME)
 public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     public static final String NAME = "SavanitdevThermalPrinter";
-    List<byte[]> setPrinter = new ArrayList<>();
+    public static List<byte[]> setPrinter = new ArrayList<>();
     private List<String> usbList, usblist;
     private BluetoothAdapter bluetoothAdapter;
     private DeviceReceiver BtReciever;
@@ -132,6 +133,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
             promise.reject("ERROR", e.toString());
         }
     }
+
   
     @ReactMethod
     public void startQuickDiscovery(int timeout, Promise promise) {
@@ -192,7 +194,9 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
         }.start();
     }
 
-    @ReactMethod
+
+
+ @ReactMethod
     private void pingDevice(String ip, int timeout, Promise promise) {
         try {
             NetworkUtils.fastPingAndGetNetworkSpeed(ip, timeout, promise);
@@ -899,7 +903,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getByteArrayList(Promise promise) {
+    public void getEncodeText(Promise promise) {
         try {
             WritableArray writableArray = Arguments.createArray();
             for (byte[] byteArray : setPrinter) {
@@ -955,7 +959,7 @@ public class SavanitdevThermalPrinterModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void text(String text, String charset) {
-        // setPrinter.add(strTobytes(text, charset));
+       setPrinter.add(strTobytes(text, charset));
     }
 
     @ReactMethod
