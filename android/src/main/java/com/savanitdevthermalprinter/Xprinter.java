@@ -15,15 +15,11 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.module.annotations.ReactModule;
 
-import net.posprinter.CPCLPrinter;
 import net.posprinter.IDeviceConnection;
 import net.posprinter.POSConnect;
 import net.posprinter.POSConst;
 import net.posprinter.POSPrinter;
-import net.posprinter.TSPLConst;
-import net.posprinter.TSPLPrinter;
-import net.posprinter.ZPLConst;
-import net.posprinter.ZPLPrinter;
+
 import net.posprinter.model.AlgorithmType;
 import net.posprinter.posprinterface.IStatusCallback;
 
@@ -119,140 +115,13 @@ public class Xprinter extends ReactContextBaseJavaModule {
         }
     }
 
-    @ReactMethod
-    public void printImgZPL(String address, String base64String, int width,int printCount, int x, int y, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                    final Bitmap bitmapToPrint = convertGreyImg(decodeBase64ToBitmap(base64String));
-                    ZPLPrinter printer = new ZPLPrinter(connection);
-                    printer.addStart()
-                             .downloadBitmap(width, "SAMPLE.GRF", bitmapToPrint)
-                             .addBitmap(x, y, "SAMPLE.GRF")
-                             .addPrintCount(printCount)
-                             .addEnd();
-
-                    statusZPL(printer,connection,promise);
-                } else {
-                    promise.reject("ERROR", "DISCONNECT");
-                }
-
-            } else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
+ 
     public  Bitmap decodeBase64ToBitmap(String base64String) {
         byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
     }
 
-    @ReactMethod
-    public void printImgTSPL(String address, String base64String, int width, int widthBmp, int height, int m, int n, int y,
-                             int x, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                    TSPLPrinter printer = new TSPLPrinter(connection);
-                    Bitmap bmp = decodeBase64ToBitmap(base64String);
-                    printer.sizeMm(width, height)
-                            .gapMm(m, n)
-                            .cls()
-                            .bitmapCompression(x, y, TSPLConst.BMP_MODE_OVERWRITE_C, widthBmp, bmp, AlgorithmType.Threshold)
-                            .print(1);
-                    promise.resolve("SUCCESS");
-                } else {
-                    promise.reject("ERROR", "DISCONNECT");
-                }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void printImgCPCL(String address, String base64String, int width, int y, int x, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                CPCLPrinter printer = new CPCLPrinter(connection);
-                Bitmap bmp = decodeBase64ToBitmap(base64String);
-                printer.addCGraphics(x, y, width, bmp, AlgorithmType.Threshold).addPrint();
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-
-            promise.reject("ERROR", e.toString());
-        }
-    }
-    public void statusZPL(ZPLPrinter printer, IDeviceConnection connection, Promise promise) {
-         try{
-        int type = connection.getConnectType();
-        printer.printerStatus(status -> {
-            // Handle the received status here
-            String msg;
-            switch (status) {
-                case 0:
-                    msg = "STS_NORMAL";
-                    promise.resolve(msg);
-                    break;
-                case 8:
-                    msg = "STS_COVEROPEN";
-                    promise.resolve(msg);
-                    break;
-                case 16:
-                    msg = "STS_PAPEREMPTY";
-                    promise.resolve(msg);
-                    break;
-                case 32:
-                    msg = "STS_PRESS_FEED";
-                    promise.resolve(msg);
-                    break;
-                case 64:
-                    promise.reject("ERROR", "PRINT_FAIL");
-                    msg = "Printer error";
-                    break;
-                default:
-                    msg = "UNKNOWN";
-                    if(status > 0 ){
-                        promise.resolve(msg);
-                    }else if(status == -4){
-                        if(type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH){
-                            promise.reject("ERROR", "PRINT_FAIL");
-                        }else{
-                            promise.resolve(msg);
-                        }
-                    }
-                    else{
-                        promise.reject("ERROR", "PRINT_FAIL");
-                    }
-                    Log.e("STATUS PRINT", String.valueOf(status));
-//                    promise.reject("ERROR", "PRINT_FAIL");
-                    break;
-            }
-
-
-            // You can now display the message
-        });
-        } catch (Exception e){
-            promise.reject("ERROR", e.toString());
-     }
-    }
+ 
     public void statusXprinter(POSPrinter printer, IDeviceConnection connection, Promise promise) {
         int type = connection.getConnectType();
         printer.printerStatus(status -> {
@@ -356,145 +225,10 @@ public class Xprinter extends ReactContextBaseJavaModule {
         }
     }
 
-    @ReactMethod
-    public void printRawDataZPL(String address, String encode, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connection);
-                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
-                printer.sendData(bytes).addEnd();
-
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-
-            promise.reject("ERROR", e.toString());
-        }
-    }
-    @ReactMethod
-    public void setPrintSpeed(String address, int speed, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connection);
-                printer.setPrintSpeed(speed);
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
-    }
-    @ReactMethod
-    public void setPrintOrientation(String address, String orientation, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connection);
-                printer.setPrintOrientation(orientation);
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "FAIL");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
-    }
-    @ReactMethod
-    public void setPrintDensity(String address, int density, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connection);
-                printer.setPrintDensity(density);
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
-    }
-    @ReactMethod
-    public void printerStatus(String address,int timeout, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                ZPLPrinter printer = new ZPLPrinter(connection);
-                printer.printerStatus(timeout, i -> promise.resolve(i));
-            } else {
-                promise.reject("ERROR", "FAIL");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
+ 
+  }
     }
 
-    @ReactMethod
-    public void printRawDataCPCL(String address, String encode, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                CPCLPrinter printer = new CPCLPrinter(connection);
-                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
-                printer.sendData(bytes).addPrint();
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
-    }
-
-    @ReactMethod
-    public void printRawDataTSPL(String address, String encode, Promise promise) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                if (connection.isConnect()) {
-                TSPLPrinter printer = new TSPLPrinter(connection);
-                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
-                printer.sendData(bytes).print();
-                promise.resolve("SUCCESS");
-            } else {
-                promise.reject("ERROR", "DISCONNECT");
-            }
-            }else {
-                promise.reject("ERROR", "GET_ID_FAIL");
-            }
-        } catch (Exception e) {
-            promise.reject("ERROR", e.toString());
-        }
-    }
 
     @ReactMethod
     public void cutESCX(String address, Promise promise) {

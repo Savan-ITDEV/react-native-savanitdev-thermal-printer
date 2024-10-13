@@ -15,33 +15,12 @@ RCT_EXTERN_METHOD(disConnect:(NSString *)ip resolver:(RCTPromiseResolveBlock)res
 
 RCT_EXTERN_METHOD(printRawDataESC:(NSString *)ip base64String:(NSString *)base64String resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
 
-RCT_EXTERN_METHOD(printImgZPL:(NSString *)ip 
-                  base64String:(NSString *)base64String
-                  width:(NSInteger *)width
-                  printCount:(NSInteger *)printCount
-                  x:(NSInteger *)x
-                  y:(NSInteger *)y
-                  resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
 
 RCT_EXTERN_METHOD(printImgESC:(NSString *)ip
                   base64String:(NSString *)base64String
                   width:(NSInteger *)width
                   resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
 
-RCT_EXTERN_METHOD(printImgTSPL:(NSString *)ip
-                  base64String:(NSString *)base64String
-                  width:(NSInteger *)width
-                  height:(NSInteger *)height
-                  x:(NSInteger *)x
-                  y:(NSInteger *)y
-                  resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
-RCT_EXTERN_METHOD(printImgCPCL:(NSString *)ip
-                  base64String:(NSString *)base64String
-                  width:(NSInteger *)width
-                  height:(NSInteger *)height
-                  x:(NSInteger *)x
-                  y:(NSInteger *)y
-                  resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
 
 RCT_EXTERN_METHOD(printTestESC:(NSString *)ip resolver:(RCTPromiseResolveBlock)resolver rejecter:(RCTPromiseRejectBlock)rejecter)
 

@@ -34,7 +34,7 @@ class SavanitdevThermalPrinter: NSObject, POSWIFIManagerDelegate,WIFIConnecterDe
 var rssiList: [NSNumber] = []
 var dataArr: [CBPeripheral] = []
     
-var wifiTSCManager: TSCWIFIManager!
+
 
 var connectedPrinterList: [WIFIConnecter] = []
 var connectedPrinterBTList: [POSBLEManager] = []
@@ -298,80 +298,7 @@ var connectedPrinterBTList: [POSBLEManager] = []
     }
     
    
-    @objc
-    func printImgZPL(_ ip :String,base64String :String,width : Int, printCount :Int, x : Int,y : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-       
-            if let imageData = Data(base64Encoded: base64String) {
-                if let image = UIImage(data: imageData) {
-                    let img = self.monoImg(image: image, threshold: 0.1)
-                    var dataM = Data(ZPLCommand.xa())
-                    dataM.append(ZPLCommand.setLabelWidth(Int32(width)))
-                    dataM.append(ZPLCommand.drawImageWithx(Int32(x), y: Int32(y), image: img!))
-                    dataM.append(ZPLCommand.setPageCount(Int32(printCount)))
-                    dataM.append(ZPLCommand.xz())
-                    if let printer = printerManager.getPrinter(id: ip)
-                    {
-                    connectResolve = resolver
-                    connectReject = rejecter
-                    printer.writeCommand(with: dataM)
-                
-                    }else{
-                    self.sendConfigNet(ip,data: dataM as Data)
-                    }
-//
-                }else{
-                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
-                }
-            }else{
-                rejecter("ERROR","ENCODE_ERORR",nil)
-            }
-        
-    }
-    @objc
-    func printImgTSPL(_ ip :String,base64String :String,width : Int,height : Int, x : Int,y : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-        if let printer = printerManager.getPrinter(id: ip)
-        {
-            if let imageData = Data(base64Encoded: base64String) {
-                if let image = UIImage(data: imageData) {
-                    var dataM = Data(TSCCommand.sizeBymm(withWidth: Double(width), andHeight: Double(height)))
-                    dataM.append(TSCCommand.bitmapWith(x: Int32(x), andY: Int32(y), andMode: 0, andImage: image))
-                    dataM.append(TSCCommand.print(1))
-                    printer.writeCommand(with: dataM)
-                    resolver("SUCCESS")
-                }else{
-                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
-                }
-            }else{
-                rejecter("ERROR","ENCODE_ERORR",nil)
-            }
-        }else{
-            rejecter("ERROR","PRINT_ERROR",nil)
-        }
-       
-    }
-    @objc
-    func printImgCPCL(_ ip :String,base64String :String,width : Int,height : Int, x : Int,y : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-        if let printer = printerManager.getPrinter(id: ip)
-        {
-            if let imageData = Data(base64Encoded: base64String) {
-                if let image = UIImage(data: imageData) {
-                    var dataM = Data(CPCLCommand.setPageWidth(Int32(width)))
-                    dataM.append(CPCLCommand.initLabel(withHeight: Int32(height)))
-                    dataM.append(CPCLCommand.drawImageWithx(Int32(x), y: Int32(y), image: image))
-                    dataM.append(CPCLCommand.print())
-                    printer.writeCommand(with: dataM)
-                    resolver("SUCCESS")
-                }else{
-                    rejecter("ERROR","CONVERT_IMG_ERROR",nil)
-                }
-            }else{
-                rejecter("ERROR","ENCODE_ERORR",nil)
-            }
-        }else{
-            rejecter("ERROR","PRINT_ERROR",nil)
-        }
-  
-    }
+ 
     @objc
     func printImgESC(_ ip :String,base64String :String,width : Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         if let printer = printerManager.getPrinter(id: ip)
