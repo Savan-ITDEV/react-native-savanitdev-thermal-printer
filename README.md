@@ -6,13 +6,13 @@
 | React Native CLI | ✅
 | Flutter | ✅
 
-| Implement      | Android | IOS |
-| -------------- | ------- | --- |
-| Base64         | ✅      | ✅  |
-| Label          | ✅      | ✅  |
-| multiple print | ✅      | ✅  |
-| XPrinter       | ✅      | ✅  |
-| ZyWell         | ✅      | ✅  |
+| Implement      | Android | IOS     |
+| -------------- | ------- | ------- |
+| Base64         | ✅      | ✅      |
+| Label          | contact | contact |
+| multiple print | contact | contact |
+| XPrinter       | ✅      | ✅      |
+| ZyWell         | ✅      | ✅      |
 
 ## Support
 
@@ -24,15 +24,17 @@
 
 <br />
 <div style="display: flex; flex-direction: row; align-self: center; align-items: center">
-<img src="https://i.ibb.co/30j9w2H/img1.jpg" alt="bill" width="370" height="580"/>
-<img src="https://i.ibb.co/5Kr2JD4/img2.jpg" alt="screenshot" width="370" height="580"/>
+<img src="https://i.ibb.co/30j9w2H/img1.jpg" alt="bill" width="370" height="370"/>
+<img src="https://i.ibb.co/5Kr2JD4/img2.jpg" alt="screenshot" width="370" height="370"/>
 </div>
 
 ## Example multiple printing 5 printers
 
-- support print WIFI,BTE and USB in one time
+- video link support print WIFI,BTE and USB in one time
 
-[![Watch the video](https://i.ibb.co/hHgBYQS/Screenshot-2024-10-12-at-10-06-45-PM.png)](https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx)
+[Watch the video on YouTube](https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx)
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/hyEmWCuuu-g" title="Thermal printer ESC POS multiple printing by Savanitdev library" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## Installation
 
@@ -45,35 +47,6 @@ or
 
 ```
 yarn add react-native-savanitdev-thermal-printer
-
-```
-
-next step
-
-```
--> React Native CLI Add below code in AndroidManifest.xml
-
- <service android:name="net.posprinter.service.PosprinterService"/>
-
--> EXPO create android-manifest.plugin.js and copy below to android-manifest.plugin.js you created. don't forgot add => "plugins": ["./android-manifest.plugin"] in app.json
-
-const { withAndroidManifest } = require("@expo/config-plugins");
-
-// add this code for auto add in manifest android
-module.exports = function androiManifestPlugin(config) {
-  return withAndroidManifest(config, async (config) => {
-    let androidManifest = config.modResults.manifest;
-    androidManifest.application[0]["service"] = {
-      $: {
-        "android:name": "net.posprinter.service.PosprinterService",
-      },
-    };
-
-    return config;
-  });
-};
-
-
 
 ```
 

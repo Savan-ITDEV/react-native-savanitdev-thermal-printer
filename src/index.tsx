@@ -293,9 +293,9 @@ export function cancelChinese(): Promise<string> {
 export function initialPrinter(): Promise<string> {
   if (Platform.OS === "android") {
     handleAndroidPermissions();
-    return SavanitdevThermalPrinter.onCreate();
+    // return SavanitdevThermalPrinter.onCreate();
   } else {
-    return SavanitdevThermalPrinter.initBLE();
+    // return SavanitdevThermalPrinter.initBLE();
   }
 }
 
@@ -750,7 +750,7 @@ export async function connectMultiXPrinter(
   }
 }
 
-export function disConnectXPrinter(address: string) {
+export function disConnectXPrinter(address: string): Promise<string> {
   return XPrinter.disConnectXPrinter(address);
 }
 

@@ -67,7 +67,7 @@ var connectedPrinterBTList: [POSBLEManager] = []
     @objc
     func startQuickDiscovery(_ timeout : UInt16 = 12, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         if #available(iOS 16.4, *) {
-            scanDevicesInLocalNetwork(timeout:Double(timeout) ,resolver: resolver,rejecter: rejecter)
+            scanDevicesInLocalNetwork(timeout:timeout ,resolver: resolver,rejecter: rejecter)
         } else {
             // Fallback on earlier versions
         }

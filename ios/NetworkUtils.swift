@@ -117,7 +117,7 @@ func scanDevicesInLocalNetwork(timeout : UInt16 = 12,resolver: @escaping RCTProm
 
        dispatchGroup.notify(queue: DispatchQueue.main) {
            let timeoutInSeconds = timeout
-           DispatchQueue.main.asyncAfter(deadline: .now() + timeoutInSeconds) {
+           DispatchQueue.main.asyncAfter(deadline: .now() + Double(timeoutInSeconds)) {
                // Code to execute after the timeout
                print("Timeout reached")
                print("Scanning completed. Found devices: \(foundIPs)")

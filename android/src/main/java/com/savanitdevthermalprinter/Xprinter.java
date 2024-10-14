@@ -6,27 +6,19 @@ import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
-
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.module.annotations.ReactModule;
-
 import net.posprinter.IDeviceConnection;
 import net.posprinter.POSConnect;
 import net.posprinter.POSConst;
 import net.posprinter.POSPrinter;
-
-import net.posprinter.model.AlgorithmType;
-import net.posprinter.posprinterface.IStatusCallback;
-
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+
 
 @ReactModule(name = Xprinter.NAME)
 public class Xprinter extends ReactContextBaseJavaModule {
@@ -225,9 +217,6 @@ public class Xprinter extends ReactContextBaseJavaModule {
         }
     }
 
- 
-  }
-    }
 
 
     @ReactMethod
@@ -319,8 +308,6 @@ public class Xprinter extends ReactContextBaseJavaModule {
         mBitmap.setPixels(pixels, 0, width, 0, 0, width, height);
         return mBitmap;
     }
-        
-
 }
 
 
