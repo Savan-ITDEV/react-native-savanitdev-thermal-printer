@@ -24,17 +24,18 @@
 
 <br />
 <div style="display: flex; flex-direction: row; align-self: center; align-items: center">
-<img src="https://i.ibb.co/30j9w2H/img1.jpg" alt="bill" width="370" height="370"/>
-<img src="https://i.ibb.co/5Kr2JD4/img2.jpg" alt="screenshot" width="370" height="370"/>
+<img src="https://i.ibb.co/30j9w2H/img1.jpg" alt="bill" width="370" height="400"/>
+<img src="https://i.ibb.co/5Kr2JD4/img2.jpg" alt="screenshot" width="370" height="420"/>
 </div>
 
-## Example multiple printing 5 printers
+[Link download APK for test](https://drive.google.com/file/d/19-ms581VjLyIBO7y7JSaQ-bL3TtqS46b/view?usp=sharing)
+
+## Video example test multiple printing
+
+[Watch the video on YouTube test multiple printing](https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx)
 
 - video link support print WIFI,BTE and USB in one time
-
-[Watch the video on YouTube](https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx)
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/hyEmWCuuu-g" title="Thermal printer ESC POS multiple printing by Savanitdev library" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+-
 
 ## Installation
 
